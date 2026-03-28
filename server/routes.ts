@@ -2763,42 +2763,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(400).json({ message: "مسار الملف مطلوب" });
       }
 
-      // Get file from Object Storage
-      const { objectStorageClient, getBucketConfig } = await import('./objectStorage');
-      
-      // Use getBucketConfig for reliable bucket resolution
-      const { bucketName } = getBucketConfig();
-      
-      const bucket = objectStorageClient.bucket(bucketName);
-      const file = bucket.file(fullPath);
+      const normalizedPath = fullPath.replace(/^public\//, '');
+      const { objectStorageService } = await import('./objectStorage');
+      const file = await objectStorageService.searchPublicObject(normalizedPath);
 
-      console.log(`[Public Media Proxy] Looking for file: bucket="${bucketName}", path="${fullPath}"`);
-      
-      // Check if file exists
-      const [exists] = await file.exists();
-      if (!exists) {
-        console.error(`[Public Media Proxy] File not found: bucket=${bucketName}, path=${fullPath}`);
+      console.log(`[Public Media Proxy] Looking for file: requested="${fullPath}", normalized="${normalizedPath}"`);
+
+      if (!file) {
+        console.error(`[Public Media Proxy] File not found: ${fullPath}`);
         return res.status(404).json({ message: "الملف غير موجود في التخزين" });
       }
-      console.log(`[Public Media Proxy] File found! Streaming...`);
 
-      // Get file metadata to determine content type
-      const [metadata] = await file.getMetadata();
-      const contentType = metadata.contentType || 'application/octet-stream';
-
-      // Stream the file to response
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=86400, stale-while-revalidate=86400, immutable'); // CDN + browser cache
       res.setHeader('Access-Control-Allow-Origin', '*'); // Allow CORS for public files
-      
-      file.createReadStream()
-        .on('error', (error) => {
-          console.error('[Public Media Proxy] Error streaming file:', error);
-          if (!res.headersSent) {
-            res.status(500).json({ message: "فشل في تحميل الملف" });
-          }
-        })
-        .pipe(res);
+      return objectStorageService.downloadObject(file, res, { forcePublic: true });
 
     } catch (error) {
       console.error('[Public Media Proxy] Error:', error);
@@ -13494,7 +13471,7 @@ Respond in valid JSON format only:
       res.json(related);
     } catch (error) {
       console.error("Error fetching related articles:", error);
-      res.status(500).json({ message: "Failed to fetch related articles" });
+      res.json([]);
     }
   });
 
@@ -13514,13 +13491,29 @@ Respond in valid JSON format only:
 
       const cacheKey = `sidebar:${articleInfo.id}`;
       const sidebarData = await withCache(cacheKey, CACHE_TTL.MEDIUM, async () => {
-        const [related, tags, mediaAssets] = await Promise.all([
+        const [relatedResult, tagsResult, mediaAssetsResult] = await Promise.allSettled([
           storage.getRelatedArticles(articleInfo.id, articleInfo.categoryId || undefined),
           storage.getArticleTags ? storage.getArticleTags(articleInfo.id) : Promise.resolve([]),
           storage.getArticleMediaAssetWithDetails ? storage.getArticleMediaAssetWithDetails(articleInfo.id) : Promise.resolve([]),
         ]);
+
+        if (relatedResult.status === "rejected") {
+          console.error("Sidebar related articles failed:", relatedResult.reason);
+        }
+
+        if (tagsResult.status === "rejected") {
+          console.error("Sidebar tags failed:", tagsResult.reason);
+        }
+
+        if (mediaAssetsResult.status === "rejected") {
+          console.error("Sidebar media assets failed:", mediaAssetsResult.reason);
+        }
         
-        return { related, tags, mediaAssets };
+        return {
+          related: relatedResult.status === "fulfilled" ? relatedResult.value : [],
+          tags: tagsResult.status === "fulfilled" ? tagsResult.value : [],
+          mediaAssets: mediaAssetsResult.status === "fulfilled" ? mediaAssetsResult.value : [],
+        };
       });
       
       res.json(sidebarData);

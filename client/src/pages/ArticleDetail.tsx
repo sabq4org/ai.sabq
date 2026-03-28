@@ -81,7 +81,7 @@ export default function ArticleDetail() {
     retry: false,
   });
 
-  const { data: article, isLoading } = useQuery<ArticleWithDetails>({
+  const { data: article, isLoading, error: articleError } = useQuery<ArticleWithDetails>({
     queryKey: ["/api/articles", slug],
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
@@ -823,6 +823,35 @@ export default function ArticleDetail() {
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-3/4" />
             </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (articleError && !article) {
+    const errorMessage = articleError instanceof Error ? articleError.message : "";
+    const isNotFoundError =
+      errorMessage.includes("404") ||
+      errorMessage.includes("Article not found") ||
+      errorMessage.includes("المقال غير موجود");
+
+    return (
+      <div className="min-h-screen bg-background/95 relative z-10">
+        <Header user={user} />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-4">
+              {isNotFoundError ? "المقال غير موجود" : "تعذر تحميل المقال"}
+            </h1>
+            <p className="text-muted-foreground mb-8">
+              {isNotFoundError
+                ? "عذراً، لم نتمكن من العثور على المقال المطلوب"
+                : "حدث خطأ أثناء تحميل المقال. يرجى المحاولة مرة أخرى."}
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              إعادة المحاولة
+            </Button>
           </div>
         </main>
       </div>
