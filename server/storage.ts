@@ -4551,6 +4551,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     const reporterAlias = aliasedTable(users, 'reporter');
+    const reporterSummaryColumns = {
+      id: reporterAlias.id,
+      firstName: reporterAlias.firstName,
+      lastName: reporterAlias.lastName,
+      profileImageUrl: reporterAlias.profileImageUrl,
+      role: reporterAlias.role,
+      bio: reporterAlias.bio,
+    };
     
     // For related articles, order by publishedAt only (not displayOrder)
     // displayOrder is for homepage curation, related articles should show recent content
