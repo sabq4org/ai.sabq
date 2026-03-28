@@ -140,6 +140,7 @@ app.get("/ready", async (_req, res) => {
 
 // CORS Configuration
 const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || [])
+  .concat(process.env.FRONTEND_URL || [])
   .concat(
     (process.env.REPLIT_DOMAINS?.split(',') || []).map(domain => 
       domain.trim().startsWith('http') ? domain.trim() : `https://${domain.trim()}`
@@ -149,6 +150,16 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || [])
   .concat(['https://appleid.apple.com']) // Allow Apple OAuth callback
   .filter(origin => origin && origin.trim().length > 0) // Remove empty strings
   .map(origin => origin.trim());
+
+function normalizeOriginForComparison(origin: string): string {
+  return origin
+    .trim()
+    .replace(/\/$/, '')
+    .replace(/:80$/, '')
+    .replace(/:443$/, '')
+    .replace(/:5000$/, '')
+    .replace(/:5001$/, '');
+}
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   cors({
@@ -170,11 +181,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
         return callback(null, true); // Still allow but log - gradual enforcement
       }
       
-      const normalizedOrigin = origin.replace(/:5000$/, '').replace(/:5001$/, '');
+      const normalizedOrigin = normalizeOriginForComparison(origin);
+      const forwardedProto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0]?.trim();
+      const forwardedHost = (req.headers['x-forwarded-host'] as string | undefined)?.split(',')[0]?.trim();
+      const requestHost = forwardedHost || req.get('host');
+      const requestProto = forwardedProto || (req.secure ? 'https' : 'http');
+      const sameOrigin = requestHost
+        ? normalizeOriginForComparison(`${requestProto}://${requestHost}`) === normalizedOrigin
+        : false;
       
-      const isAllowed = allowedOrigins.includes(origin) || 
+      const isAllowed = sameOrigin ||
+                        allowedOrigins.includes(origin) || 
                         allowedOrigins.includes(normalizedOrigin) ||
-                        allowedOrigins.some(allowed => allowed.replace(/:5000$/, '').replace(/:5001$/, '') === normalizedOrigin);
+                        allowedOrigins.some(allowed => normalizeOriginForComparison(allowed) === normalizedOrigin);
       
       if (isAllowed) {
         callback(null, true);
