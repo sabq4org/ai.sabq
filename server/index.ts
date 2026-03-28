@@ -766,7 +766,8 @@ async function startServerListening(): Promise<void> {
     
     if (!isProductionMode && app.get("env") === "development") {
       console.log("[Server] Starting in DEVELOPMENT mode with Vite");
-      const { setupVite } = await import("./vite");
+      const viteModulePath = `./${"vite"}`;
+      const { setupVite } = await import(viteModulePath);
       await setupVite(app, server);
       console.log("[Server] ✅ Vite setup completed");
     } else {
