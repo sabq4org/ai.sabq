@@ -11,7 +11,6 @@ import journalistAgentRoutes from './journalist-agent-routes';
 import emailAgentRoutes from './routes/emailAgent';
 import whatsappAgentRoutes from './routes/whatsappAgent';
 import commentModerationRoutes from './routes/commentModeration';
-import { startMessageAggregatorJob } from './services/whatsappMessageAggregator';
 import ifoxAiManagementRoutes from './routes/ifox/ai-management';
 import autoImageRoutes from './routes/autoImageRoutes';
 import nativeAdsRouter from './routes/nativeAds';
@@ -460,9 +459,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Apply CSRF validation to all state-changing API routes
   app.use("/api", validateCsrfToken);
   
-  // Start WhatsApp message aggregator job (processes multi-part messages)
-  startMessageAggregatorJob();
-
   // Helper function to check if user has moderator role (legacy + RBAC)
   const COMMENT_MODERATOR_ROLES = ["admin", "superadmin", "editor", "chief_editor", "moderator", "comments_moderator"];
   
@@ -1141,14 +1137,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Get current user
   app.get("/api/auth/user", async (req: any, res) => {
     try {
-      console.log('🔍 /api/auth/user check:', {
-        isAuthenticated: req.isAuthenticated(),
-        hasUser: !!req.user,
-        userId: req.user?.id,
-        sessionID: req.sessionID
-      });
-      
-      if (!req.isAuthenticated() || !req.user?.id) {
+      const isAuthenticated =
+        typeof req.isAuthenticated === "function" ? req.isAuthenticated() : false;
+
+      if (process.env.NODE_ENV !== "production") {
+        console.log("🔍 /api/auth/user check:", {
+          isAuthenticated,
+          hasUser: !!req.user,
+          userId: req.user?.id,
+          sessionID: req.sessionID,
+        });
+      }
+
+      if (!isAuthenticated || !req.user?.id) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 

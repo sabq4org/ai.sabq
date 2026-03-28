@@ -285,7 +285,11 @@ export async function apiRequest<T = any>(
   
   // Helper to make the actual request
   async function makeRequest(retryAttempt = 0): Promise<T> {
-    const currentCsrfToken = getCsrfToken();
+    let currentCsrfToken = getCsrfToken();
+    if (isStateChangingMethod && !currentCsrfToken) {
+      await initializeCsrf();
+      currentCsrfToken = getCsrfToken();
+    }
     
     const headers: Record<string, string> = {
       ...(options?.body && typeof options.body === 'string' ? { "Content-Type": "application/json" } : {}),

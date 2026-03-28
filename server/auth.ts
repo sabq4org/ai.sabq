@@ -123,6 +123,7 @@ function needsSession(req: { method: string; path: string; headers: Record<strin
   }
   const hasCookie = !!(req.headers.cookie && req.headers.cookie.includes('connect.sid'));
   if (hasCookie) return true;
+  if (req.path === "/api/auth/user") return false;
   for (const prefix of SESSION_REQUIRED_PREFIXES) {
     if (req.path.startsWith(prefix)) return true;
   }

@@ -15,6 +15,7 @@ const { Pool: NodePgPool } = pg;
 
 type DatabasePool = InstanceType<typeof NeonPool> | InstanceType<typeof NodePgPool>;
 type DatabaseClient = NeonDatabase<typeof schema> | NodePgDatabase<typeof schema>;
+type PoolOptions = ReturnType<typeof getPoolOptions>;
 
 // Graceful database connection with error handling
 let pool: DatabasePool;
@@ -22,6 +23,7 @@ let db: DatabaseClient;
 let _dbConnected = false;
 let _dbLastError: string | null = null;
 let _reconnectTimer: ReturnType<typeof setInterval> | null = null;
+let _activePoolOptions: PoolOptions | null = null;
 
 function normalizeDatabaseUrl(
   envName: "NEON_DATABASE_URL" | "DATABASE_URL",
@@ -68,15 +70,35 @@ function isLocalDatabaseUrl(databaseUrl: string): boolean {
   }
 }
 
+function readPoolNumberEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    console.warn(`[DB] Invalid ${name}="${rawValue}". Falling back to ${fallback}.`);
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function getProcessRole(): "web" | "worker" {
+  return process.env.SABQ_PROCESS_ROLE === "worker" ? "worker" : "web";
+}
+
 function getPoolOptions(databaseUrl: string) {
+  const processRole = getProcessRole();
+  const defaultMax = processRole === "worker" ? 5 : 10;
+
   return {
     connectionString: databaseUrl,
-    max: 25,
-    min: 0,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    max: readPoolNumberEnv("DB_POOL_MAX", defaultMax),
+    min: readPoolNumberEnv("DB_POOL_MIN", 0),
+    idleTimeoutMillis: readPoolNumberEnv("DB_POOL_IDLE_TIMEOUT_MS", 30000),
+    connectionTimeoutMillis: readPoolNumberEnv("DB_POOL_CONNECTION_TIMEOUT_MS", 10000),
     allowExitOnIdle: true,
-    maxUses: 5000,
+    maxUses: readPoolNumberEnv("DB_POOL_MAX_USES", 5000),
   };
 }
 
@@ -85,6 +107,7 @@ function initPool(databaseUrl: string): void {
   const isExternalNeon = !!process.env.NEON_DATABASE_URL;
   const modeLabel = useLocalPostgres ? 'Local PostgreSQL' : (isExternalNeon ? 'External Neon' : 'Replit DB');
   const poolOptions = getPoolOptions(databaseUrl);
+  _activePoolOptions = poolOptions;
 
   console.log(`[DB] Initializing connection (${modeLabel})...`);
 
@@ -201,7 +224,11 @@ try {
   initPool(databaseUrl);
   
   console.log("[DB] Pool initialized");
-  console.log(`[DB] Pool config: max=25, min=0, idleTimeout=30s, connTimeout=10s, allowExitOnIdle=true (Autoscale safe: 25x3pods=75<80 Neon limit)`);
+  if (_activePoolOptions) {
+    console.log(
+      `[DB] Pool config: role=${getProcessRole()}, max=${_activePoolOptions.max}, min=${_activePoolOptions.min}, idleTimeout=${Math.round(_activePoolOptions.idleTimeoutMillis / 1000)}s, connTimeout=${Math.round(_activePoolOptions.connectionTimeoutMillis / 1000)}s, allowExitOnIdle=true`
+    );
+  }
   
   const monitorInterval = process.env.NODE_ENV === 'production' ? 300000 : 60000;
   const monitorTimer = setInterval(() => {
