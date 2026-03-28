@@ -23,8 +23,40 @@ let _dbConnected = false;
 let _dbLastError: string | null = null;
 let _reconnectTimer: ReturnType<typeof setInterval> | null = null;
 
+function normalizeDatabaseUrl(
+  envName: "NEON_DATABASE_URL" | "DATABASE_URL",
+  rawValue: string | undefined
+): string | undefined {
+  const trimmedValue = rawValue?.trim();
+
+  if (!trimmedValue) {
+    return undefined;
+  }
+
+  if (/\$\{[^}]+\}/.test(trimmedValue)) {
+    console.error(
+      `[DB] ${envName} contains an unresolved placeholder: ${trimmedValue}`
+    );
+    console.error(
+      `[DB] Replace it with a real PostgreSQL connection string before starting the server.`
+    );
+    return undefined;
+  }
+
+  try {
+    new URL(trimmedValue);
+    return trimmedValue;
+  } catch {
+    console.error(`[DB] ${envName} is not a valid URL: ${trimmedValue}`);
+    return undefined;
+  }
+}
+
 function getDatabaseUrl(): string | undefined {
-  return process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+  return (
+    normalizeDatabaseUrl("NEON_DATABASE_URL", process.env.NEON_DATABASE_URL) ||
+    normalizeDatabaseUrl("DATABASE_URL", process.env.DATABASE_URL)
+  );
 }
 
 function isLocalDatabaseUrl(databaseUrl: string): boolean {

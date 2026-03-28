@@ -517,6 +517,36 @@ async function startServerListening(): Promise<void> {
   });
 }
 
+function getDatabaseEnvStatus():
+  | { status: "ok"; envName: "NEON_DATABASE_URL" | "DATABASE_URL" }
+  | { status: "missing" }
+  | { status: "invalid"; envName: "NEON_DATABASE_URL" | "DATABASE_URL"; value: string } {
+  const candidates: Array<["NEON_DATABASE_URL" | "DATABASE_URL", string | undefined]> = [
+    ["NEON_DATABASE_URL", process.env.NEON_DATABASE_URL],
+    ["DATABASE_URL", process.env.DATABASE_URL],
+  ];
+
+  for (const [envName, rawValue] of candidates) {
+    const value = rawValue?.trim();
+    if (!value) {
+      continue;
+    }
+
+    if (/\$\{[^}]+\}/.test(value)) {
+      return { status: "invalid", envName, value };
+    }
+
+    try {
+      new URL(value);
+      return { status: "ok", envName };
+    } catch {
+      return { status: "invalid", envName, value };
+    }
+  }
+
+  return { status: "missing" };
+}
+
 (async () => {
   try {
     console.log("[Server] Starting full initialization...");
@@ -524,14 +554,18 @@ async function startServerListening(): Promise<void> {
     console.log(`[Server] Port: ${port}`);
     
     if (isProduction) {
-      const requiredEnvVars = ["DATABASE_URL"];
-      const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-      
-      if (missingVars.length > 0) {
-        console.error(`[Server] ⚠️  WARNING: Missing required environment variables: ${missingVars.join(", ")}`);
+      const databaseEnvStatus = getDatabaseEnvStatus();
+
+      if (databaseEnvStatus.status === "missing") {
+        console.error("[Server] ⚠️  WARNING: Missing required environment variable: DATABASE_URL or NEON_DATABASE_URL");
         console.error("[Server] Server will start but database features will not work");
+      } else if (databaseEnvStatus.status === "invalid") {
+        console.error(
+          `[Server] ⚠️  WARNING: ${databaseEnvStatus.envName} is set but invalid: ${databaseEnvStatus.value}`
+        );
+        console.error("[Server] Replace it with a real PostgreSQL connection string before deploying");
       } else {
-        console.log("[Server] ✅ All required environment variables are present");
+        console.log(`[Server] ✅ Database environment variable is present: ${databaseEnvStatus.envName}`);
       }
     }
 
