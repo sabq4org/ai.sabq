@@ -1,0 +1,247 @@
+/**
+ * Sabq.org SEO-Optimized 404 Worker (Simplified Logic v2.0)
+ * 
+ * This Cloudflare Worker intercepts requests and returns proper HTTP 404 status codes
+ * for non-existent content, solving the "Soft 404" problem caused by SPA fallback.
+ * 
+ * VERIFY Logic (simplified):
+ * - Only verify: Short URLs (7 chars) + Content paths (/article/, /category/, etc.)
+ * - Everything else: Pass directly to SPA/Origin (no verification)
+ * 
+ * 404 Response:
+ * - Fetches custom 404 page from origin (/not-found) and returns with HTTP 404 status
+ */
+
+var CACHE_TTL = 60;
+var EDGE_EXISTS_PATH = '/api/edge-exists';
+var NOT_FOUND_PATH = '/not-found';
+var NOT_FOUND_CACHE_TTL = 300;
+
+var STATIC_EXTENSIONS = [
+  '.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2',
+  '.ttf', '.eot', '.webp', '.avif', '.mp4', '.webm', '.json', '.xml', '.txt', '.map',
+  '.pdf', '.zip', '.gz', '.tar', '.rar', '.7z', '.doc', '.docx', '.xls', '.xlsx'
+];
+
+var SHORT_URL_PATTERN = /^\/([a-zA-Z0-9]{5,9})$/;
+
+var KNOWN_ROOT_WORDS = [
+  'news', 'about', 'login', 'admin', 'staff', 'terms', 'ifox',
+  'search', 'video', 'media', 'live', 'mirqab', 'opinion', 'audio',
+  'careers', 'privacy', 'register', 'profile', 'settings', 'contact',
+  'bookmarks', 'history', 'notifications', 'trending', 'latest', 'popular',
+  'dashboard', 'categories', 'advertise', 'publishers', 'health', 'ready',
+  'lite', 'en', 'ur', 'omq', 'ai'
+];
+
+var CONTENT_PREFIXES = [
+  '/article/',
+  '/opinion/',
+  '/category/',
+  '/reporter/',
+  '/writer/',
+  '/omq/'
+];
+
+function classifyRequest(pathname) {
+  if (pathname.startsWith('/api/') || pathname === '/health' || pathname === '/ready') {
+    return { type: 'api', shouldCheck: false };
+  }
+
+  for (var i = 0; i < STATIC_EXTENSIONS.length; i++) {
+    if (pathname.endsWith(STATIC_EXTENSIONS[i])) {
+      return { type: 'static', shouldCheck: false };
+    }
+  }
+
+  if (pathname.startsWith('/@') || pathname.startsWith('/node_modules/') || pathname.startsWith('/assets/')) {
+    return { type: 'static', shouldCheck: false };
+  }
+
+  if (SHORT_URL_PATTERN.test(pathname)) {
+    var slug = pathname.slice(1).toLowerCase();
+    if (KNOWN_ROOT_WORDS.indexOf(slug) !== -1) {
+      return { type: 'spa', shouldCheck: false };
+    }
+    return { type: 'short-url', shouldCheck: true };
+  }
+
+  for (var j = 0; j < CONTENT_PREFIXES.length; j++) {
+    if (pathname.startsWith(CONTENT_PREFIXES[j])) {
+      return { type: 'content', shouldCheck: true };
+    }
+  }
+
+  return { type: 'spa', shouldCheck: false };
+}
+
+async function checkExistence(origin, pathname) {
+  var cacheKey = 'edge-exists:' + pathname;
+  var cache = caches.default;
+  
+  var cachedResponse = await cache.match(new Request('https://cache-key/' + cacheKey));
+  if (cachedResponse) {
+    try {
+      return await cachedResponse.json();
+    } catch (e) {}
+  }
+
+  try {
+    var url = new URL(EDGE_EXISTS_PATH, origin);
+    url.searchParams.set('path', pathname);
+    
+    var response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Cloudflare-Worker/1.0'
+      }
+    });
+
+    if (!response.ok) {
+      console.log('[EdgeExists] Origin returned ' + response.status + ' for ' + pathname);
+      return { exists: true };
+    }
+
+    var data = await response.json();
+
+    var cacheResponse = new Response(JSON.stringify(data), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=' + CACHE_TTL
+      }
+    });
+    await cache.put(new Request('https://cache-key/' + cacheKey), cacheResponse);
+
+    return data;
+  } catch (error) {
+    console.error('[EdgeExists] Error checking ' + pathname + ':', error);
+    return { exists: true };
+  }
+}
+
+async function fetchCustom404Page(origin) {
+  var cacheKey = 'custom-404-page';
+  var cache = caches.default;
+  
+  var cachedResponse = await cache.match(new Request('https://cache-key/' + cacheKey));
+  if (cachedResponse) {
+    return cachedResponse.text();
+  }
+
+  try {
+    var response = await fetch(origin + NOT_FOUND_PATH, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Cloudflare-Worker/1.0',
+        'Accept': 'text/html'
+      }
+    });
+
+    if (response.ok) {
+      var html = await response.text();
+      
+      var cacheResponse = new Response(html, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=' + NOT_FOUND_CACHE_TTL
+        }
+      });
+      await cache.put(new Request('https://cache-key/' + cacheKey), cacheResponse);
+      
+      return html;
+    }
+  } catch (error) {
+    console.error('[404] Error fetching custom 404 page:', error);
+  }
+
+  return getFallback404Html();
+}
+
+function getFallback404Html() {
+  return '<!DOCTYPE html>\n' +
+'<html lang="ar" dir="rtl">\n' +
+'<head>\n' +
+'  <meta charset="UTF-8">\n' +
+'  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+'  <title>404 - الصفحة غير موجودة | سبق</title>\n' +
+'  <meta name="robots" content="noindex">\n' +
+'  <style>\n' +
+'    * { margin: 0; padding: 0; box-sizing: border-box; }\n' +
+'    body {\n' +
+'      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;\n' +
+'      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);\n' +
+'      min-height: 100vh;\n' +
+'      display: flex;\n' +
+'      align-items: center;\n' +
+'      justify-content: center;\n' +
+'      color: #fff;\n' +
+'    }\n' +
+'    .container { text-align: center; padding: 2rem; }\n' +
+'    h1 {\n' +
+'      font-size: 8rem;\n' +
+'      font-weight: bold;\n' +
+'      background: linear-gradient(45deg, #e94560, #ff6b6b);\n' +
+'      -webkit-background-clip: text;\n' +
+'      -webkit-text-fill-color: transparent;\n' +
+'      margin-bottom: 1rem;\n' +
+'    }\n' +
+'    h2 { font-size: 1.5rem; color: #a0a0a0; margin-bottom: 2rem; }\n' +
+'    a {\n' +
+'      display: inline-block;\n' +
+'      padding: 1rem 2rem;\n' +
+'      background: linear-gradient(45deg, #e94560, #ff6b6b);\n' +
+'      color: white;\n' +
+'      text-decoration: none;\n' +
+'      border-radius: 50px;\n' +
+'      font-weight: bold;\n' +
+'      transition: transform 0.3s, box-shadow 0.3s;\n' +
+'    }\n' +
+'    a:hover {\n' +
+'      transform: translateY(-3px);\n' +
+'      box-shadow: 0 10px 20px rgba(233, 69, 96, 0.3);\n' +
+'    }\n' +
+'  </style>\n' +
+'</head>\n' +
+'<body>\n' +
+'  <div class="container">\n' +
+'    <h1>404</h1>\n' +
+'    <h2>عذراً، الصفحة التي تبحث عنها غير موجودة</h2>\n' +
+'    <a href="/">العودة للصفحة الرئيسية</a>\n' +
+'  </div>\n' +
+'</body>\n' +
+'</html>';
+}
+
+async function handleRequest(request) {
+  var url = new URL(request.url);
+  var pathname = url.pathname;
+  
+  var classification = classifyRequest(pathname);
+  
+  if (!classification.shouldCheck) {
+    return fetch(request);
+  }
+
+  var existence = await checkExistence(url.origin, pathname);
+  
+  if (!existence.exists) {
+    console.log('[404] Returning 404 for non-existent ' + classification.type + ': ' + pathname);
+    
+    var notFoundHtml = await fetchCustom404Page(url.origin);
+
+    return new Response(notFoundHtml, {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=60',
+        'X-Robots-Tag': 'noindex'
+      }
+    });
+  }
+
+  return fetch(request);
+}
+
+addEventListener('fetch', function(event) {
+  event.respondWith(handleRequest(event.request));
+});

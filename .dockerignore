@@ -1,0 +1,16 @@
+node_modules
+.git
+.env
+*.log
+.replit
+replit.nix
+.quintype-data
+scripts
+attached_assets/*
+!attached_assets/sabq-logo.png
+!attached_assets/sabq_ai_mascot_1_1_1763712965053.png
+!attached_assets/smart-categories-structure.json
+.cache
+.local
+.upm
+.config

@@ -1,0 +1,462 @@
+{
+  "meta": {
+    "version": "1.0",
+    "generated_at": "2025-10-29",
+    "description": "هيكل التصنيفات الذكية لمنصة سبق الذكية - نظام متطور يجمع بين التصنيفات الثابتة والديناميكية والموسمية"
+  },
+  "categories": [
+    {
+      "name_ar": "الآن",
+      "name_en": "Now",
+      "slug": "now",
+      "description": "موجز فوري للأخبار والاتجاهات الحية - يتحدث تلقائياً كل 5 دقائق",
+      "color": "#EF4444",
+      "icon": "Flame",
+      "type": "dynamic",
+      "status": "active",
+      "order": 1,
+      "autoActivate": true,
+      "updateInterval": 300,
+      "features": {
+        "realtime": true,
+        "ai_powered": true,
+        "trending": true,
+        "breaking_news": true
+      }
+    },
+    {
+      "name_ar": "مختارات AI",
+      "name_en": "AI Picks",
+      "slug": "ai-picks",
+      "description": "مختارات ذكية مخصصة لك بناءً على اهتماماتك وسلوكك القرائي",
+      "color": "#8B5CF6",
+      "icon": "Sparkles",
+      "type": "dynamic",
+      "status": "active",
+      "order": 2,
+      "autoActivate": true,
+      "features": {
+        "personalized": true,
+        "ai_powered": true,
+        "recommendation_engine": true,
+        "learning": true
+      }
+    },
+    {
+      "name_ar": "رؤى وبيانات",
+      "name_en": "Insights & Data",
+      "slug": "insights-data",
+      "description": "تحليلات بيانية تفاعلية تعتمد على الذكاء الاصطناعي - رسوم بيانية وتصورات ذكية",
+      "color": "#06B6D4",
+      "icon": "BarChart3",
+      "type": "smart",
+      "status": "active",
+      "order": 3,
+      "autoActivate": true,
+      "features": {
+        "data_visualization": true,
+        "ai_analysis": true,
+        "interactive": true,
+        "charts": true
+      }
+    },
+    {
+      "name_ar": "التحليل العميق",
+      "name_en": "Deep Analysis",
+      "slug": "deep-analysis",
+      "description": "تحليلات معمقة ومقالات طويلة تغطي القضايا المعقدة بشكل شامل",
+      "color": "#7C3AED",
+      "icon": "Brain",
+      "type": "smart",
+      "status": "active",
+      "order": 4,
+      "autoActivate": false,
+      "features": {
+        "long_form": true,
+        "expert_analysis": true,
+        "ai_summary": true,
+        "audio_version": true
+      }
+    },
+    {
+      "name_ar": "صوت سبق",
+      "name_en": "Sabq Voice",
+      "slug": "sabq-voice",
+      "description": "مقالات الرأي والتحليلات من كتّاب ومحللي سبق",
+      "color": "#F59E0B",
+      "icon": "Radio",
+      "type": "core",
+      "status": "active",
+      "order": 5,
+      "autoActivate": false,
+      "features": {
+        "opinion": true,
+        "authors": true,
+        "audio_newsletter": true
+      }
+    },
+    {
+      "name_ar": "محليات",
+      "name_en": "Local",
+      "slug": "local",
+      "description": "أخبار المناطق والمدن السعودية",
+      "color": "#3B82F6",
+      "icon": "MapPin",
+      "type": "core",
+      "status": "active",
+      "order": 10,
+      "autoActivate": false,
+      "features": {
+        "regional": true,
+        "cities": true,
+        "location_based": true
+      }
+    },
+    {
+      "name_ar": "العالم",
+      "name_en": "World",
+      "slug": "world",
+      "description": "أخبار العالم والتحليلات الدولية",
+      "color": "#6366F1",
+      "icon": "Globe",
+      "type": "core",
+      "status": "active",
+      "order": 11,
+      "autoActivate": false,
+      "features": {
+        "international": true,
+        "analysis": true,
+        "geopolitics": true
+      }
+    },
+    {
+      "name_ar": "تقنية وابتكار",
+      "name_en": "Tech & Innovation",
+      "slug": "technology",
+      "description": "أخبار وتطورات التقنية والذكاء الاصطناعي والابتكار",
+      "color": "#8B5CF6",
+      "icon": "Cpu",
+      "type": "core",
+      "status": "active",
+      "order": 12,
+      "autoActivate": false,
+      "features": {
+        "ai": true,
+        "startups": true,
+        "innovation": true,
+        "product_reviews": true
+      }
+    },
+    {
+      "name_ar": "أعمال واقتصاد",
+      "name_en": "Business & Economy",
+      "slug": "business",
+      "description": "أخبار الأعمال والشركات وريادة الأعمال والاقتصاد",
+      "color": "#10B981",
+      "icon": "TrendingUp",
+      "type": "core",
+      "status": "active",
+      "order": 13,
+      "autoActivate": false,
+      "features": {
+        "markets": true,
+        "startups": true,
+        "entrepreneurship": true,
+        "economy": true
+      }
+    },
+    {
+      "name_ar": "رياضة",
+      "name_en": "Sports",
+      "slug": "sports",
+      "description": "أخبار رياضية محلية وعالمية",
+      "color": "#F59E0B",
+      "icon": "Trophy",
+      "type": "core",
+      "status": "active",
+      "order": 14,
+      "autoActivate": false,
+      "features": {
+        "live_scores": true,
+        "matches": true,
+        "leagues": true,
+        "athletes": true
+      }
+    },
+    {
+      "name_ar": "حياتنا",
+      "name_en": "Lifestyle",
+      "slug": "life",
+      "description": "نمط الحياة، الصحة، الأسرة والمجتمع",
+      "color": "#F472B6",
+      "icon": "Heart",
+      "type": "core",
+      "status": "active",
+      "order": 15,
+      "autoActivate": false,
+      "features": {
+        "health": true,
+        "family": true,
+        "wellness": true,
+        "society": true
+      }
+    },
+    {
+      "name_ar": "ثقافة وفنون",
+      "name_en": "Culture & Arts",
+      "slug": "culture",
+      "description": "الفنون، الثقافة، السينما، الموسيقى والأدب",
+      "color": "#EC4899",
+      "icon": "Palette",
+      "type": "core",
+      "status": "active",
+      "order": 16,
+      "autoActivate": false,
+      "features": {
+        "cinema": true,
+        "music": true,
+        "literature": true,
+        "exhibitions": true
+      }
+    },
+    {
+      "name_ar": "سياحة وسفر",
+      "name_en": "Tourism & Travel",
+      "slug": "tourism",
+      "description": "تقارير سياحية ومواقع مميزة ودلائل سفر",
+      "color": "#34D399",
+      "icon": "Plane",
+      "type": "core",
+      "status": "active",
+      "order": 17,
+      "autoActivate": false,
+      "features": {
+        "destinations": true,
+        "guides": true,
+        "hotels": true,
+        "attractions": true
+      }
+    },
+    {
+      "name_ar": "سيارات",
+      "name_en": "Cars",
+      "slug": "cars",
+      "description": "أخبار وتقارير السيارات والسيارات الكهربائية",
+      "color": "#0EA5E9",
+      "icon": "Car",
+      "type": "core",
+      "status": "active",
+      "order": 18,
+      "autoActivate": false,
+      "features": {
+        "reviews": true,
+        "electric": true,
+        "news": true,
+        "comparisons": true
+      }
+    },
+    {
+      "name_ar": "طاقة ومناخ",
+      "name_en": "Energy & Climate",
+      "slug": "energy-climate",
+      "description": "أخبار الطاقة المتجددة والتغير المناخي والاستدامة",
+      "color": "#22C55E",
+      "icon": "Zap",
+      "type": "core",
+      "status": "active",
+      "order": 19,
+      "autoActivate": false,
+      "features": {
+        "renewable": true,
+        "climate": true,
+        "sustainability": true,
+        "green_tech": true
+      }
+    },
+    {
+      "name_ar": "رمضان الذكي",
+      "name_en": "Smart Ramadan",
+      "slug": "smart-ramadan",
+      "description": "تغطية شاملة لشهر رمضان بتقنيات ذكية - برامج، أنشطة، إفطار، صحة",
+      "color": "#F59E0B",
+      "icon": "Moon",
+      "type": "seasonal",
+      "status": "inactive",
+      "order": 100,
+      "autoActivate": true,
+      "seasonalRules": {
+        "hijriMonth": "رمضان",
+        "activateDaysBefore": 7,
+        "deactivateDaysAfter": 3,
+        "hijriYear": "auto"
+      },
+      "features": {
+        "prayer_times": true,
+        "ramadan_programs": true,
+        "iftar_recipes": true,
+        "charity": true
+      }
+    },
+    {
+      "name_ar": "الحج والعمرة",
+      "name_en": "Hajj & Umrah",
+      "slug": "hajj-umrah",
+      "description": "دليل شامل للحج والعمرة - أخبار، إرشادات، خدمات ذكية",
+      "color": "#065F46",
+      "icon": "Landmark",
+      "type": "seasonal",
+      "status": "inactive",
+      "order": 101,
+      "autoActivate": true,
+      "seasonalRules": {
+        "hijriMonth": "ذو الحجة",
+        "activateDaysBefore": 30,
+        "deactivateDaysAfter": 5,
+        "hijriYear": "auto"
+      },
+      "features": {
+        "guides": true,
+        "services": true,
+        "live_updates": true,
+        "safety": true
+      }
+    },
+    {
+      "name_ar": "كأس العالم",
+      "name_en": "World Cup",
+      "slug": "world-cup",
+      "description": "تغطية حية وشاملة لكأس العالم - مباريات، تحليلات، إحصائيات",
+      "color": "#DC2626",
+      "icon": "Award",
+      "type": "seasonal",
+      "status": "inactive",
+      "order": 102,
+      "autoActivate": false,
+      "seasonalRules": {
+        "dateRange": {
+          "start": "2026-06-01",
+          "end": "2026-07-20"
+        }
+      },
+      "features": {
+        "live_scores": true,
+        "match_analysis": true,
+        "stats": true,
+        "predictions": true
+      }
+    },
+    {
+      "name_ar": "الميزانية والاقتصاد",
+      "name_en": "Budget & Economy",
+      "slug": "budget",
+      "description": "تحليل ميزانية الدولة والتوجهات الاقتصادية",
+      "color": "#059669",
+      "icon": "Coins",
+      "type": "seasonal",
+      "status": "inactive",
+      "order": 103,
+      "autoActivate": true,
+      "seasonalRules": {
+        "gregorianMonth": 12,
+        "activateDaysBefore": 15,
+        "deactivateDaysAfter": 7
+      },
+      "features": {
+        "budget_analysis": true,
+        "infographics": true,
+        "expert_opinions": true,
+        "data_viz": true
+      }
+    }
+  ],
+  "ui_recommendations": {
+    "main_bar": {
+      "description": "الشريط الرئيسي الثابت - يظهر دائماً في أعلى الموقع",
+      "categories": ["now", "local", "world", "technology", "business", "sports"],
+      "maxVisible": 6,
+      "responsive": {
+        "mobile": 4,
+        "tablet": 5,
+        "desktop": 6
+      }
+    },
+    "smart_bar": {
+      "description": "الشريط الذكي المتغير - يتكيف حسب الوقت والسياق والاهتمامات",
+      "categories": ["ai-picks", "insights-data", "deep-analysis", "sabq-voice"],
+      "maxVisible": 4,
+      "responsive": {
+        "mobile": 2,
+        "tablet": 3,
+        "desktop": 4
+      },
+      "aiRules": {
+        "personalizedOrder": true,
+        "timeBasedRotation": true,
+        "trendingFirst": true
+      }
+    },
+    "secondary_bar": {
+      "description": "شريط التصنيفات الثانوية",
+      "categories": ["life", "culture", "tourism", "cars", "energy-climate"],
+      "displayMode": "dropdown",
+      "label": "المزيد"
+    },
+    "seasonal_bar": {
+      "description": "شريط التصنيفات الموسمية - يظهر تلقائياً عند تفعيل التصنيف الموسمي",
+      "categories": ["smart-ramadan", "hajj-umrah", "world-cup", "budget"],
+      "displayMode": "highlight",
+      "position": "top",
+      "autoHide": true
+    }
+  },
+  "features": {
+    "ai_engine": {
+      "recommendation_system": true,
+      "trending_detection": true,
+      "personalization": true,
+      "auto_categorization": true,
+      "seasonal_activation": true
+    },
+    "automation": {
+      "seasonal_categories": "تفعيل/تعطيل تلقائي حسب التواريخ الهجرية والميلادية",
+      "trending_update": "تحديث تصنيف 'الآن' كل 5 دقائق",
+      "ai_picks_refresh": "تحديث مختارات AI كل ساعة لكل مستخدم"
+    },
+    "analytics": {
+      "category_performance": true,
+      "user_engagement": true,
+      "click_through_rate": true,
+      "time_on_category": true
+    }
+  },
+  "technical_specs": {
+    "database": {
+      "table": "categories",
+      "new_fields": [
+        "type: enum('core', 'dynamic', 'smart', 'seasonal')",
+        "auto_activate: boolean",
+        "update_interval: integer (seconds)",
+        "seasonal_rules: jsonb",
+        "features: jsonb",
+        "ai_config: jsonb"
+      ]
+    },
+    "cron_jobs": [
+      {
+        "name": "seasonal_categories_activator",
+        "schedule": "0 */6 * * *",
+        "description": "يفحص ويفعّل/يعطّل التصنيفات الموسمية كل 6 ساعات"
+      },
+      {
+        "name": "trending_updater",
+        "schedule": "*/5 * * * *",
+        "description": "يحدث تصنيف 'الآن' كل 5 دقائق"
+      },
+      {
+        "name": "ai_picks_refresher",
+        "schedule": "0 * * * *",
+        "description": "يحدث مختارات AI كل ساعة"
+      }
+    ]
+  }
+}

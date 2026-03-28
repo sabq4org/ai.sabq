@@ -1,0 +1,32 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "usJLwx72Hj6lkfEfI7YAq"
+uri = "file://.local/tasks/sabq-ios-native-prompt.md"
+type = "text"
+title = "برومبت شامل: تحويل سبق الذكية إلى تطبيق iOS أصلي"
+
+[[outputs]]
+id = "wWvwasqsdHQDjllnoaSqR"
+uri = "file://docs/gulf-live-guide.md"
+type = "text"
+title = "دليل تغطية البث الحي — للزملاء"
+
+[[outputs]]
+id = "lkft6cKc9LTIt-HomJwFT"
+uri = "file://تقرير_الأداء_المعماري_سبق.md"
+type = "text"
+title = "تقرير الأداء المعماري — صحيفة سبق"
+
+[[outputs]]
+id = "Kqral1fAcHwAoaMT5zXzm"
+uri = "file://sabq-dashboard-documentation.md"
+type = "text"
+title = "توثيق لوحة تحكم سبق الذكية - Sabq Dashboard Documentation"
+
+[[outputs]]
+id = "K8R6-YE6qlN-sCTLov7pV"
+uri = "file://sabq-ios-api-reference.md"
+type = "text"
+title = "دليل تطبيق سبق iOS الشامل — API + التصميم"

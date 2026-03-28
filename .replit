@@ -1,0 +1,92 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["imagemagick", "unzip", "jq", "chromium"]
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["node", "dist/bootstrap.js"]
+
+[proxy]
+path = "/"
+target = "http://localhost:5000"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
+[[ports]]
+localPort = 5998
+externalPort = 3002
+
+[[ports]]
+localPort = 5999
+externalPort = 3001
+
+[[ports]]
+localPort = 9996
+externalPort = 6000
+
+[[ports]]
+localPort = 9997
+externalPort = 5000
+
+[[ports]]
+localPort = 9998
+externalPort = 4200
+
+[[ports]]
+localPort = 9999
+externalPort = 3003
+
+[env]
+PORT = "5000"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[agent]
+integrations = ["javascript_openai:1.0.0", "javascript_object_storage:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "twilio:1.0.0", "javascript_openai_ai_integrations:1.0.0", "javascript_anthropic_ai_integrations:1.0.0", "javascript_gemini_ai_integrations:2.0.0", "javascript_google_analytics:1.0.0"]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-3dc2325c-bbbe-4e54-9a00-e6f10b243138"
+
+[userenv]
+
+[userenv.shared]
+# Configure secrets in the deployment platform, not in the repository.
+ALLOWED_ORIGINS = "https://sabq.org,https://mobile.sabq.org,https://sabq.news,https://www.sabq.news,https://sabq.life,https://www.sabq.life"
+EDITOR_ALERTS_ENABLED = "true"
+APNS_ENVIRONMENT = "production"
+VITE_GA_MEASUREMENT_ID = "G-EEB5593GY7"
+AWS_S3_REGION = "us-east-1"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
