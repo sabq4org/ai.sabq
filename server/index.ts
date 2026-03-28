@@ -151,7 +151,44 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || [])
   .filter(origin => origin && origin.trim().length > 0) // Remove empty strings
   .map(origin => origin.trim());
 
+function isStaticAssetRequest(urlPath: string): boolean {
+  const normalizedPath = urlPath.toLowerCase();
+  if (
+    normalizedPath.startsWith('/assets/') ||
+    normalizedPath.startsWith('/uploads/') ||
+    normalizedPath.startsWith('/branding/') ||
+    normalizedPath.startsWith('/fixtures/')
+  ) {
+    return true;
+  }
+
+  return [
+    '.js',
+    '.css',
+    '.map',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.webp',
+    '.gif',
+    '.svg',
+    '.ico',
+    '.woff',
+    '.woff2',
+    '.ttf',
+    '.otf',
+  ].some(extension => normalizedPath.endsWith(extension));
+}
+
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/$/, '').replace(/:5000$/, '').replace(/:5001$/, '');
+}
+
 app.use((req: Request, res: Response, next: NextFunction) => {
+  if (isStaticAssetRequest(req.path)) {
+    return next();
+  }
+
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) {
@@ -171,11 +208,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
         return callback(null, true); // Still allow but log - gradual enforcement
       }
       
-      const normalizedOrigin = origin.replace(/:5000$/, '').replace(/:5001$/, '');
+      const normalizedOrigin = normalizeOrigin(origin);
+      const forwardedProto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0]?.trim();
+      const requestProtocol = forwardedProto || req.protocol || 'https';
+      const requestHost = req.get('host');
+      const requestOrigin = requestHost ? normalizeOrigin(`${requestProtocol}://${requestHost}`) : null;
+
+      if (requestOrigin && normalizedOrigin === requestOrigin) {
+        return callback(null, true);
+      }
       
       const isAllowed = allowedOrigins.includes(origin) || 
                         allowedOrigins.includes(normalizedOrigin) ||
-                        allowedOrigins.some(allowed => allowed.replace(/:5000$/, '').replace(/:5001$/, '') === normalizedOrigin);
+                        allowedOrigins.some(allowed => normalizeOrigin(allowed) === normalizedOrigin);
       
       if (isAllowed) {
         callback(null, true);
@@ -187,7 +232,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     },
     credentials: true, // Allow cookies and authentication headers
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token', 'x-csrf-token'],
   })(req, res, next);
 });
 
