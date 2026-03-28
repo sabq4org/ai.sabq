@@ -36,8 +36,15 @@ export async function trackUserEvent(params: {
   articleId: string;
   eventType: EventType;
   metadata?: Record<string, any>;
+  incrementArticleViews?: boolean;
 }): Promise<void> {
-  const { userId, articleId, eventType, metadata = {} } = params;
+  const {
+    userId,
+    articleId,
+    eventType,
+    metadata = {},
+    incrementArticleViews = true,
+  } = params;
 
   // Calculate event value
   const baseValue = EVENT_WEIGHTS[eventType] || 1;
@@ -91,7 +98,7 @@ export async function trackUserEvent(params: {
   console.log(`✅ [EVENT TRACKING] Tracked event: ${eventType} for article ${articleId} (value: ${eventValue})`);
 
   // Update article view count if event is 'view'
-  if (eventType === 'view') {
+  if (eventType === 'view' && incrementArticleViews) {
     await db
       .update(articles)
       .set({ views: sql`${articles.views} + 1` })

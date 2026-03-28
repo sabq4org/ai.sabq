@@ -9,7 +9,6 @@ import path from "path";
 import fs from "fs";
 import { objectStorageClient } from "../objectStorage";
 import { setObjectAclPolicy } from "../objectAcl";
-import { getUploadsSubdirectory } from "../uploadsDir";
 
 const router = Router();
 
@@ -37,7 +36,14 @@ const ADVERTISER_UPLOADS_PATH = "advertiser-ads";
 console.log(`[NativeAds] GCS Bucket ID: ${GCS_BUCKET_ID || "(not configured)"}`);
 console.log(`[NativeAds] PUBLIC_OBJECT_SEARCH_PATHS: ${process.env.PUBLIC_OBJECT_SEARCH_PATHS || "(not set)"}`);
 
-const uploadsDir = getUploadsSubdirectory("advertiser-ads");
+// Fallback: Also maintain local uploads directory for development/testing
+const legacyUploadsDir = "/home/runner/workspace/uploads/advertiser-ads";
+const uploadsDir = fs.existsSync(path.dirname(legacyUploadsDir))
+  ? legacyUploadsDir
+  : path.resolve(process.cwd(), "uploads", "advertiser-ads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 console.log(`[NativeAds] Advertiser uploads directory: ${uploadsDir}`);
 
 // Configure multer for advertiser uploads

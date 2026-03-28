@@ -9,7 +9,6 @@ import cookieParser from "cookie-parser";
 import fs from "fs";
 import path from "path";
 import { startBackgroundServices } from "./backgroundWorkers";
-import { uploadsRootDir } from "./uploadsDir";
 
 process.on('uncaughtException', (error) => {
   console.error('[CRITICAL] Uncaught Exception:', error.message);
@@ -141,7 +140,6 @@ app.get("/ready", async (_req, res) => {
 
 // CORS Configuration
 const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || [])
-  .concat(process.env.FRONTEND_URL || [])
   .concat(
     (process.env.REPLIT_DOMAINS?.split(',') || []).map(domain => 
       domain.trim().startsWith('http') ? domain.trim() : `https://${domain.trim()}`
@@ -152,29 +150,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || [])
   .filter(origin => origin && origin.trim().length > 0) // Remove empty strings
   .map(origin => origin.trim());
 
-function normalizeOriginForComparison(origin: string): string {
-  return origin
-    .trim()
-    .replace(/\/$/, '')
-    .replace(/:80$/, '')
-    .replace(/:443$/, '')
-    .replace(/:5000$/, '')
-    .replace(/:5001$/, '');
-}
-
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const isStaticAssetRequest =
-    req.path.startsWith('/assets/') ||
-    req.path.startsWith('/branding/') ||
-    req.path.startsWith('/uploads/') ||
-    req.path === '/service-worker.js' ||
-    req.path === '/favicon.ico' ||
-    /\.(js|css|map|mjs|cjs|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|json|txt|xml)$/i.test(req.path);
-
-  if (isStaticAssetRequest) {
-    return next();
-  }
-
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) {
@@ -194,19 +170,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
         return callback(null, true); // Still allow but log - gradual enforcement
       }
       
-      const normalizedOrigin = normalizeOriginForComparison(origin);
-      const forwardedProto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0]?.trim();
-      const forwardedHost = (req.headers['x-forwarded-host'] as string | undefined)?.split(',')[0]?.trim();
-      const requestHost = forwardedHost || req.get('host');
-      const requestProto = forwardedProto || (req.secure ? 'https' : 'http');
-      const sameOrigin = requestHost
-        ? normalizeOriginForComparison(`${requestProto}://${requestHost}`) === normalizedOrigin
-        : false;
+      const normalizedOrigin = origin.replace(/:5000$/, '').replace(/:5001$/, '');
       
-      const isAllowed = sameOrigin ||
-                        allowedOrigins.includes(origin) || 
+      const isAllowed = allowedOrigins.includes(origin) || 
                         allowedOrigins.includes(normalizedOrigin) ||
-                        allowedOrigins.some(allowed => normalizeOriginForComparison(allowed) === normalizedOrigin);
+                        allowedOrigins.some(allowed => allowed.replace(/:5000$/, '').replace(/:5001$/, '') === normalizedOrigin);
       
       if (isAllowed) {
         callback(null, true);
@@ -292,8 +260,11 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })); // Increased for base64 image uploads
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-app.use('/uploads', express.static(uploadsRootDir));
-console.log(`[Server] ✅ Static uploads directory configured: ${uploadsRootDir}`);
+// Prefer the legacy Replit uploads path when available, otherwise use the local workspace.
+const replitUploadsDir = '/home/runner/workspace/uploads';
+const uploadsDir = fs.existsSync(replitUploadsDir) ? replitUploadsDir : path.resolve(process.cwd(), 'uploads');
+app.use('/uploads', express.static(uploadsDir));
+console.log(`[Server] ✅ Static uploads directory configured: ${uploadsDir}`);
 
 // Serve static files from public directory (for branding, logos, etc.)
 const publicDir = path.join(process.cwd(), 'public');
@@ -549,36 +520,6 @@ async function startServerListening(): Promise<void> {
   });
 }
 
-function getDatabaseEnvStatus():
-  | { status: "ok"; envName: "NEON_DATABASE_URL" | "DATABASE_URL" }
-  | { status: "missing" }
-  | { status: "invalid"; envName: "NEON_DATABASE_URL" | "DATABASE_URL"; value: string } {
-  const candidates: Array<["NEON_DATABASE_URL" | "DATABASE_URL", string | undefined]> = [
-    ["NEON_DATABASE_URL", process.env.NEON_DATABASE_URL],
-    ["DATABASE_URL", process.env.DATABASE_URL],
-  ];
-
-  for (const [envName, rawValue] of candidates) {
-    const value = rawValue?.trim();
-    if (!value) {
-      continue;
-    }
-
-    if (/\$\{[^}]+\}/.test(value)) {
-      return { status: "invalid", envName, value };
-    }
-
-    try {
-      new URL(value);
-      return { status: "ok", envName };
-    } catch {
-      return { status: "invalid", envName, value };
-    }
-  }
-
-  return { status: "missing" };
-}
-
 (async () => {
   try {
     console.log("[Server] Starting full initialization...");
@@ -586,18 +527,14 @@ function getDatabaseEnvStatus():
     console.log(`[Server] Port: ${port}`);
     
     if (isProduction) {
-      const databaseEnvStatus = getDatabaseEnvStatus();
-
-      if (databaseEnvStatus.status === "missing") {
-        console.error("[Server] ⚠️  WARNING: Missing required environment variable: DATABASE_URL or NEON_DATABASE_URL");
+      const requiredEnvVars = ["DATABASE_URL"];
+      const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+      
+      if (missingVars.length > 0) {
+        console.error(`[Server] ⚠️  WARNING: Missing required environment variables: ${missingVars.join(", ")}`);
         console.error("[Server] Server will start but database features will not work");
-      } else if (databaseEnvStatus.status === "invalid") {
-        console.error(
-          `[Server] ⚠️  WARNING: ${databaseEnvStatus.envName} is set but invalid: ${databaseEnvStatus.value}`
-        );
-        console.error("[Server] Replace it with a real PostgreSQL connection string before deploying");
       } else {
-        console.log(`[Server] ✅ Database environment variable is present: ${databaseEnvStatus.envName}`);
+        console.log("[Server] ✅ All required environment variables are present");
       }
     }
 
@@ -847,16 +784,10 @@ function getDatabaseEnvStatus():
 
     try {
       const { pool } = await import("./db");
-      if (!pool) {
-        console.warn(
-          "[Server] ⚠️  Database client is unavailable; skipping warmup and continuing in degraded mode"
-        );
-      } else {
       const client = await pool.connect();
       await client.query('SELECT 1');
       client.release();
       databaseWarmedUp = true;
-      }
     } catch (error) {
       console.error("[Server] ⚠️  Database warmup failed; server will stay unready:", error);
 
@@ -959,6 +890,7 @@ function getDatabaseEnvStatus():
       
       // Image migration PAUSED — re-enable when ready by restoring the auto-start block
       console.log("[Server] 🖼️ Image migration auto-start is DISABLED (paused manually)");
+
       await startBackgroundServices({
         enableBackgroundWorkers: process.env.ENABLE_BACKGROUND_WORKERS === "true",
       });

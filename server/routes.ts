@@ -13048,185 +13048,186 @@ Respond in valid JSON format only:
   // News Analytics Endpoint - Smart statistics and insights
   app.get("/api/news/analytics", async (req, res) => {
     try {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const prevMonthStart = new Date(monthAgo.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const analytics = await withSWR(
+        "news:analytics:v1",
+        CACHE_TTL.SHORT,
+        CACHE_TTL.MEDIUM,
+        async () => {
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+          const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+          const prevMonthStart = new Date(monthAgo.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      // Get article counts for different periods (excluding opinion articles)
-      const [todayCount] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(articles)
-        .where(and(
-          gte(articles.publishedAt, today),
-          eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-          or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
-        ));
+          const [todayCount] = await db.select({ count: sql<number>`count(*)::int` })
+            .from(articles)
+            .where(and(
+              gte(articles.publishedAt, today),
+              eq(articles.status, "published"),
+              eq(articles.hideFromHomepage, false),
+              or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
+            ));
 
-      const [weekCount] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(articles)
-        .where(and(
-          gte(articles.publishedAt, weekAgo),
-          eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-          or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
-        ));
+          const [weekCount] = await db.select({ count: sql<number>`count(*)::int` })
+            .from(articles)
+            .where(and(
+              gte(articles.publishedAt, weekAgo),
+              eq(articles.status, "published"),
+              eq(articles.hideFromHomepage, false),
+              or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
+            ));
 
-      const [monthCount] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(articles)
-        .where(and(
-          gte(articles.publishedAt, monthAgo),
-          eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-          or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
-        ));
+          const [monthCount] = await db.select({ count: sql<number>`count(*)::int` })
+            .from(articles)
+            .where(and(
+              gte(articles.publishedAt, monthAgo),
+              eq(articles.status, "published"),
+              eq(articles.hideFromHomepage, false),
+              or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
+            ));
 
-      const [prevMonthCount] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(articles)
-        .where(and(
-          gte(articles.publishedAt, prevMonthStart),
-          sql`${articles.publishedAt} < ${monthAgo}`,
-          eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-          or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
-        ));
+          const [prevMonthCount] = await db.select({ count: sql<number>`count(*)::int` })
+            .from(articles)
+            .where(and(
+              gte(articles.publishedAt, prevMonthStart),
+              sql`${articles.publishedAt} < ${monthAgo}`,
+              eq(articles.status, "published"),
+              eq(articles.hideFromHomepage, false),
+              or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
+            ));
 
-      // Calculate growth percentage
-      const growthPercentage = prevMonthCount.count > 0
-        ? ((monthCount.count - prevMonthCount.count) / prevMonthCount.count) * 100
-        : 0;
+          const growthPercentage = prevMonthCount.count > 0
+            ? ((monthCount.count - prevMonthCount.count) / prevMonthCount.count) * 100
+            : 0;
 
-      // Get most active category
-      const topCategory = await db.select({
-        categoryId: articles.categoryId,
-        count: sql<number>`count(*)::int`,
-        name: categories.nameAr,
-        icon: categories.icon,
-        color: categories.color,
-      })
-        .from(articles)
-        .leftJoin(categories, eq(articles.categoryId, categories.id))
-        .where(and(
-          gte(articles.publishedAt, monthAgo),
-          eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-          or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
-        ))
-        .groupBy(articles.categoryId, categories.nameAr, categories.icon, categories.color)
-        .orderBy(sql`count(*) DESC`)
-        .limit(1);
+          const topCategory = await db.select({
+            categoryId: articles.categoryId,
+            count: sql<number>`count(*)::int`,
+            name: categories.nameAr,
+            icon: categories.icon,
+            color: categories.color,
+          })
+            .from(articles)
+            .leftJoin(categories, eq(articles.categoryId, categories.id))
+            .where(and(
+              gte(articles.publishedAt, monthAgo),
+              eq(articles.status, "published"),
+              eq(articles.hideFromHomepage, false),
+              or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
+            ))
+            .groupBy(articles.categoryId, categories.nameAr, categories.icon, categories.color)
+            .orderBy(sql`count(*) DESC`)
+            .limit(1);
 
-      // Get most active reporter (prefer reporter over system author)
-      let topAuthor = await db.select({
-        userId: articles.reporterId,
-        count: sql<number>`count(*)::int`,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        profileImageUrl: users.profileImageUrl,
-      })
-        .from(articles)
-        .innerJoin(users, eq(articles.reporterId, users.id))
-        .where(and(
-          gte(articles.publishedAt, monthAgo),
-          eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-          or(isNull(articles.articleType), ne(articles.articleType, 'opinion')),
-          isNotNull(articles.reporterId)
-        ))
-        .groupBy(articles.reporterId, users.firstName, users.lastName, users.profileImageUrl)
-        .orderBy(sql`count(*) DESC`)
-        .limit(1);
+          let topAuthor = await db.select({
+            userId: articles.reporterId,
+            count: sql<number>`count(*)::int`,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+          })
+            .from(articles)
+            .innerJoin(users, eq(articles.reporterId, users.id))
+            .where(and(
+              gte(articles.publishedAt, monthAgo),
+              eq(articles.status, "published"),
+              eq(articles.hideFromHomepage, false),
+              or(isNull(articles.articleType), ne(articles.articleType, 'opinion')),
+              isNotNull(articles.reporterId)
+            ))
+            .groupBy(articles.reporterId, users.firstName, users.lastName, users.profileImageUrl)
+            .orderBy(sql`count(*) DESC`)
+            .limit(1);
 
-      // Fallback to authorId if no reporter found
-      if (!topAuthor || topAuthor.length === 0) {
-        topAuthor = await db.select({
-          userId: articles.authorId,
-          count: sql<number>`count(*)::int`,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          profileImageUrl: users.profileImageUrl,
-        })
-          .from(articles)
-          .innerJoin(users, eq(articles.authorId, users.id))
-          .where(and(
-            gte(articles.publishedAt, monthAgo),
-            eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-            or(isNull(articles.articleType), ne(articles.articleType, 'opinion')),
-            isNotNull(articles.authorId)
-          ))
-          .groupBy(articles.authorId, users.firstName, users.lastName, users.profileImageUrl)
-          .orderBy(sql`count(*) DESC`)
-          .limit(1);
-      }
+          if (!topAuthor || topAuthor.length === 0) {
+            topAuthor = await db.select({
+              userId: articles.authorId,
+              count: sql<number>`count(*)::int`,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              profileImageUrl: users.profileImageUrl,
+            })
+              .from(articles)
+              .innerJoin(users, eq(articles.authorId, users.id))
+              .where(and(
+                gte(articles.publishedAt, monthAgo),
+                eq(articles.status, "published"),
+                eq(articles.hideFromHomepage, false),
+                or(isNull(articles.articleType), ne(articles.articleType, 'opinion')),
+                isNotNull(articles.authorId)
+              ))
+              .groupBy(articles.authorId, users.firstName, users.lastName, users.profileImageUrl)
+              .orderBy(sql`count(*) DESC`)
+              .limit(1);
+          }
 
-      // Get total views
-      const [totalViewsResult] = await db.select({
-        total: sql<number>`COALESCE(SUM(${articles.views}), 0)::int`
-      })
-        .from(articles)
-        .where(and(
-          eq(articles.status, "published"),
-          eq(articles.hideFromHomepage, false),
-          or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
-        ));
+          const [totalViewsResult] = await db.select({
+            total: sql<number>`COALESCE(SUM(${articles.views}), 0)::int`
+          })
+            .from(articles)
+            .where(and(
+              eq(articles.status, "published"),
+              eq(articles.hideFromHomepage, false),
+              or(isNull(articles.articleType), ne(articles.articleType, 'opinion'))
+            ));
 
-      // Get total interactions (reactions + bookmarks + comments)
-      const [totalReactions] = await db.select({
-        count: sql<number>`count(*)::int`
-      }).from(reactions);
+          const [totalReactions] = await db.select({
+            count: sql<number>`count(*)::int`
+          }).from(reactions);
 
-      const [totalBookmarks] = await db.select({
-        count: sql<number>`count(*)::int`
-      }).from(bookmarks);
+          const [totalBookmarks] = await db.select({
+            count: sql<number>`count(*)::int`
+          }).from(bookmarks);
 
-      const [totalComments] = await db.select({
-        count: sql<number>`count(*)::int`
-      }).from(comments);
+          const [totalComments] = await db.select({
+            count: sql<number>`count(*)::int`
+          }).from(comments);
 
-      const totalInteractions = (totalReactions?.count || 0) + 
-                                (totalBookmarks?.count || 0) + 
-                                (totalComments?.count || 0);
+          const totalInteractions = (totalReactions?.count || 0) +
+            (totalBookmarks?.count || 0) +
+            (totalComments?.count || 0);
 
-      // Generate simple AI insights (can be enhanced with real AI later)
-      const insights = {
-        dailySummary: "منصة سبق الذكية تواصل تقديم أحدث الأخبار والتحليلات لقرائها",
-        topTopics: [],
-        activityTrend: growthPercentage > 5 ? "نمو ملحوظ في النشاط" : growthPercentage < -5 ? "انخفاض في النشاط" : "نشاط مستقر",
-        keyHighlights: [
-          `تم نشر ${todayCount.count} خبراً اليوم`,
-          topCategory[0] ? `تصنيف ${topCategory[0].name} الأكثر نشاطاً` : "تنوع في التصنيفات",
-          `إجمالي ${totalInteractions.toLocaleString('en-US')} تفاعل`
-        ]
-      };
+          const insights = {
+            dailySummary: "منصة سبق الذكية تواصل تقديم أحدث الأخبار والتحليلات لقرائها",
+            topTopics: [],
+            activityTrend: growthPercentage > 5 ? "نمو ملحوظ في النشاط" : growthPercentage < -5 ? "انخفاض في النشاط" : "نشاط مستقر",
+            keyHighlights: [
+              `تم نشر ${todayCount.count} خبراً اليوم`,
+              topCategory[0] ? `تصنيف ${topCategory[0].name} الأكثر نشاطاً` : "تنوع في التصنيفات",
+              `إجمالي ${totalInteractions.toLocaleString('en-US')} تفاعل`
+            ]
+          };
 
-      res.json({
-        period: {
-          today: todayCount.count || 0,
-          week: weekCount.count || 0,
-          month: monthCount.count || 0,
-        },
-        growth: {
-          percentage: Math.round(growthPercentage * 10) / 10,
-          trend: growthPercentage > 0 ? 'up' : growthPercentage < 0 ? 'down' : 'stable',
-          previousMonth: prevMonthCount.count || 0,
-        },
-        topCategory: topCategory[0] ? {
-          name: topCategory[0].name,
-          icon: topCategory[0].icon,
-          color: topCategory[0].color,
-          count: topCategory[0].count,
-        } : null,
-        topAuthor: topAuthor[0] ? {
-          name: `${topAuthor[0].firstName || ''} ${topAuthor[0].lastName || ''}`.trim(),
-          profileImageUrl: topAuthor[0].profileImageUrl,
-          count: topAuthor[0].count,
-        } : null,
-        totalViews: totalViewsResult.total || 0,
-        totalInteractions,
-        aiInsights: insights,
-      });
+          return {
+            period: {
+              today: todayCount.count || 0,
+              week: weekCount.count || 0,
+              month: monthCount.count || 0,
+            },
+            growth: {
+              percentage: Math.round(growthPercentage * 10) / 10,
+              trend: growthPercentage > 0 ? 'up' : growthPercentage < 0 ? 'down' : 'stable',
+              previousMonth: prevMonthCount.count || 0,
+            },
+            topCategory: topCategory[0] ? {
+              name: topCategory[0].name,
+              icon: topCategory[0].icon,
+              color: topCategory[0].color,
+              count: topCategory[0].count,
+            } : null,
+            topAuthor: topAuthor[0] ? {
+              name: `${topAuthor[0].firstName || ''} ${topAuthor[0].lastName || ''}`.trim(),
+              profileImageUrl: topAuthor[0].profileImageUrl,
+              count: topAuthor[0].count,
+            } : null,
+            totalViews: totalViewsResult.total || 0,
+            totalInteractions,
+            aiInsights: insights,
+          };
+        }
+      );
+
+      res.json(analytics);
     } catch (error) {
       console.error("Error fetching news analytics:", error);
       res.status(500).json({ message: "Failed to fetch news analytics" });
@@ -13664,83 +13665,80 @@ Respond in valid JSON format only:
       if (!article) {
         return res.status(404).json({ message: "Article not found" });
       }
+      const cacheKey = `article:ai-recommendations:${req.params.slug}:${userId || "anon"}`;
+      const enhancedRecommendations = await withCache(cacheKey, CACHE_TTL.MEDIUM, async () => {
+        const similarArticles = await findSimilarArticles(article.id, 5, []);
 
-      // Get personalized recommendations using similarity engine
-      const similarArticles = await findSimilarArticles(article.id, 5, []);
-      
-      // Get personalized recommendations if user is logged in
-      let personalizedRecommendations: any[] = [];
-      if (userId) {
-    try {
-          personalizedRecommendations = await getPersonalizedRecommendations(userId, 3, [article.id]);
-        } catch (error) {
-          console.error("Error getting personalized recommendations:", error);
-        }
-      }
-
-      // Combine and deduplicate
-      const combinedRecommendations = [
-        ...personalizedRecommendations,
-        ...similarArticles.filter((sa: any) => 
-          !personalizedRecommendations.find((pr: any) => pr.articleId === sa.articleId)
-        )
-      ].slice(0, 5);
-
-      const articleIds = combinedRecommendations.map((r: any) => r.articleId);
-      if (articleIds.length === 0) return res.json([]);
-
-      const unorderedArticles = await db
-        .select({
-          id: articles.id,
-          title: articles.title,
-          slug: articles.slug,
-          englishSlug: articles.englishSlug,
-          excerpt: articles.excerpt,
-          imageUrl: articles.imageUrl,
-          thumbnailUrl: articles.thumbnailUrl,
-          imageFocalPoint: articles.imageFocalPoint,
-          categoryId: articles.categoryId,
-          publishedAt: articles.publishedAt,
-          views: articles.views,
-          newsType: articles.newsType,
-          articleType: articles.articleType,
-        })
-        .from(articles)
-        .where(and(
-          eq(articles.status, 'published'),
-          inArray(articles.id, articleIds)
-        ))
-        .limit(5);
-
-      const articleMap = new Map(unorderedArticles.map(a => [a.id, a]));
-      const recommendedArticles = articleIds.map(id => articleMap.get(id)).filter(Boolean);
-
-      // Enhance with AI reasoning
-      const enhancedRecommendations = recommendedArticles.map((rec: any, index: number) => {
-        let reason = "";
-        let icon = "Newspaper";
-        
-        // Determine reason based on recommendation source
-        if (personalizedRecommendations.find((pr: any) => pr.articleId === rec.id)) {
-          reason = "مختار خصيصًا لك بناءً على اهتماماتك";
-          icon = "Brain";
-        } else if (rec.categoryId === article.categoryId) {
-          reason = "مشابه في التصنيف والموضوع";
-          icon = "Sparkles";
-        } else {
-          reason = "قد يثير اهتمامك أيضًا";
-          icon = "Compass";
-        }
-
-        return {
-          ...rec,
-          aiMetadata: {
-            reason,
-            icon,
-            aiLabel: "اقتراح من الذكاء الاصطناعي",
-            relevanceScore: Math.max(70, 100 - (index * 10)),
+        let personalizedRecommendations: any[] = [];
+        if (userId) {
+          try {
+            personalizedRecommendations = await getPersonalizedRecommendations(userId, 3, [article.id]);
+          } catch (error) {
+            console.error("Error getting personalized recommendations:", error);
           }
-        };
+        }
+
+        const combinedRecommendations = [
+          ...personalizedRecommendations,
+          ...similarArticles.filter((sa: any) =>
+            !personalizedRecommendations.find((pr: any) => pr.articleId === sa.articleId)
+          )
+        ].slice(0, 5);
+
+        const articleIds = combinedRecommendations.map((r: any) => r.articleId);
+        if (articleIds.length === 0) return [];
+
+        const unorderedArticles = await db
+          .select({
+            id: articles.id,
+            title: articles.title,
+            slug: articles.slug,
+            englishSlug: articles.englishSlug,
+            excerpt: articles.excerpt,
+            imageUrl: articles.imageUrl,
+            thumbnailUrl: articles.thumbnailUrl,
+            imageFocalPoint: articles.imageFocalPoint,
+            categoryId: articles.categoryId,
+            publishedAt: articles.publishedAt,
+            views: articles.views,
+            newsType: articles.newsType,
+            articleType: articles.articleType,
+          })
+          .from(articles)
+          .where(and(
+            eq(articles.status, 'published'),
+            inArray(articles.id, articleIds)
+          ))
+          .limit(5);
+
+        const articleMap = new Map(unorderedArticles.map(a => [a.id, a]));
+        const recommendedArticles = articleIds.map(id => articleMap.get(id)).filter(Boolean);
+
+        return recommendedArticles.map((rec: any, index: number) => {
+          let reason = "";
+          let icon = "Newspaper";
+
+          if (personalizedRecommendations.find((pr: any) => pr.articleId === rec.id)) {
+            reason = "مختار خصيصًا لك بناءً على اهتماماتك";
+            icon = "Brain";
+          } else if (rec.categoryId === article.categoryId) {
+            reason = "مشابه في التصنيف والموضوع";
+            icon = "Sparkles";
+          } else {
+            reason = "قد يثير اهتمامك أيضًا";
+            icon = "Compass";
+          }
+
+          return {
+            ...rec,
+            aiMetadata: {
+              reason,
+              icon,
+              aiLabel: "اقتراح من الذكاء الاصطناعي",
+              relevanceScore: Math.max(70, 100 - (index * 10)),
+            }
+          };
+        });
       });
 
       res.json(enhancedRecommendations);
@@ -13985,20 +13983,6 @@ Respond in valid JSON format only:
       // Buffer view count increment (flushed to DB every 30 seconds)
       const viewIncrement = Math.floor(Math.random() * 6) + 5;
       viewBuffer.set(articleId, (viewBuffer.get(articleId) || 0) + viewIncrement);
-
-      // Also log for authenticated users
-      const userId = req.user?.id;
-      if (userId) {
-        try {
-          await storage.logBehavior({
-            userId,
-            eventType: "article_view",
-            metadata: { articleId },
-          });
-        } catch (err) {
-          // Silent fail for behavior logging
-        }
-      }
 
       res.json({ success: true });
     } catch (error) {
@@ -18678,6 +18662,7 @@ ${currentTitle ? `العنوان الحالي: ${currentTitle}\n\n` : ''}
               metadata: {
                 scrollDepth: meta.scrollDepth,
               },
+              incrementArticleViews: false,
             });
           }
         } catch (error) {

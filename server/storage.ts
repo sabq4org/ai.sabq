@@ -450,6 +450,112 @@ import {
   articleTags,
 } from "@shared/schema";
 
+const {
+  content: _articleContent,
+  seoMetadata: _articleSeoMetadata,
+  infographicData: _articleInfographicData,
+  weeklyPhotosData: _articleWeeklyPhotosData,
+  albumImages: _articleAlbumImages,
+  sourceMetadata: _articleSourceMetadata,
+  ...articleSummaryColumns
+} = getTableColumns(articles);
+
+const articleSummaryDefaults: Pick<
+  Article,
+  "content" | "seoMetadata" | "infographicData" | "weeklyPhotosData" | "albumImages" | "sourceMetadata"
+> = {
+  content: "",
+  seoMetadata: null,
+  infographicData: null,
+  weeklyPhotosData: null,
+  albumImages: [],
+  sourceMetadata: null,
+};
+
+const categorySummaryColumns = {
+  id: categories.id,
+  nameAr: categories.nameAr,
+  nameEn: categories.nameEn,
+  slug: categories.slug,
+  color: categories.color,
+  icon: categories.icon,
+  type: categories.type,
+} as const;
+
+const authorSummaryColumns = {
+  id: users.id,
+  firstName: users.firstName,
+  lastName: users.lastName,
+  profileImageUrl: users.profileImageUrl,
+  role: users.role,
+  bio: users.bio,
+} as const;
+
+function toCategorySummary(category: Partial<Category> | null | undefined): Category | undefined {
+  if (!category?.id) return undefined;
+
+  return {
+    description: null,
+    displayOrder: 0,
+    status: "active",
+    createdAt: null,
+    updatedAt: null,
+    ...category,
+  } as Category;
+}
+
+function toPublicUserSummary(user: Partial<User> | null | undefined): User | undefined {
+  if (!user?.id) return undefined;
+
+  return {
+    email: null,
+    passwordHash: null,
+    status: "active",
+    isProfileComplete: true,
+    emailVerified: false,
+    phoneVerified: false,
+    verificationBadge: "none",
+    twoFactorSecret: null,
+    twoFactorEnabled: false,
+    twoFactorBackupCodes: null,
+    twoFactorMethod: "authenticator",
+    lastActivityAt: null,
+    suspendedUntil: null,
+    suspensionReason: null,
+    bannedUntil: null,
+    banReason: null,
+    accountLocked: false,
+    lockedUntil: null,
+    failedLoginAttempts: 0,
+    deletedAt: null,
+    authProvider: "local",
+    googleId: null,
+    appleId: null,
+    createdAt: null,
+    updatedAt: null,
+    ...user,
+  } as User;
+}
+
+function toArticleSummaryWithDetails(
+  article: Partial<Article>,
+  options: {
+    category?: Partial<Category> | null;
+    author?: Partial<User> | null;
+    reporter?: Partial<User> | null;
+    story?: { id?: string | null; title?: string | null } | null;
+  } = {},
+): ArticleWithDetails {
+  return {
+    ...articleSummaryDefaults,
+    ...article,
+    category: toCategorySummary(options.category),
+    author: toPublicUserSummary(options.reporter || options.author),
+    storyId: options.story?.id || undefined,
+    storyTitle: options.story?.title || undefined,
+  } as ArticleWithDetails;
+}
+
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
@@ -3915,13 +4021,21 @@ export class DatabaseStorage implements IStorage {
     }
 
     const reporterAlias = aliasedTable(users, 'reporter');
+    const reporterSummaryColumns = {
+      id: reporterAlias.id,
+      firstName: reporterAlias.firstName,
+      lastName: reporterAlias.lastName,
+      profileImageUrl: reporterAlias.profileImageUrl,
+      role: reporterAlias.role,
+      bio: reporterAlias.bio,
+    };
     
     const results = await db
       .select({
-        article: articles,
-        category: categories,
-        author: users,
-        reporter: reporterAlias,
+        article: articleSummaryColumns,
+        category: categorySummaryColumns,
+        author: authorSummaryColumns,
+        reporter: reporterSummaryColumns,
       })
       .from(articles)
       .leftJoin(categories, eq(articles.categoryId, categories.id))
@@ -3931,11 +4045,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(articles.displayOrder), desc(articles.publishedAt), desc(articles.createdAt))
       .limit(filters?.limit || 500);
 
-    return results.map((r) => ({
-      ...r.article,
-      category: r.category || undefined,
-      author: r.reporter || r.author || undefined,
-    }));
+    return results.map((r) =>
+      toArticleSummaryWithDetails(r.article, {
+        category: r.category,
+        author: r.author,
+        reporter: r.reporter,
+      })
+    );
   }
 
   async getArticleBySlug(slug: string, userId?: string, userRole?: string): Promise<ArticleWithDetails | undefined> {
@@ -3960,20 +4076,18 @@ export class DatabaseStorage implements IStorage {
         c.is_ifox_category as category_is_ifox_category,
         -- Author (users) fields
         u.id as author_id,
-        u.email as author_email,
         u.first_name as author_first_name,
         u.last_name as author_last_name,
         u.profile_image_url as author_profile_image_url,
         u.role as author_role,
-        u.created_at as author_created_at,
-        u.email_verified as author_email_verified,
+        u.bio as author_bio,
         -- Reporter (users) fields
         r.id as reporter_id,
-        r.email as reporter_email,
         r.first_name as reporter_first_name,
         r.last_name as reporter_last_name,
         r.profile_image_url as reporter_profile_image_url,
         r.role as reporter_role,
+        r.bio as reporter_bio,
         -- Staff member fields (for author)
         s.id as staff_id,
         s.name_ar as staff_name_ar,
@@ -4121,24 +4235,22 @@ export class DatabaseStorage implements IStorage {
     // Reconstruct author object
     const author = row.author_id ? {
       id: row.author_id,
-      email: row.author_email,
       firstName: row.author_first_name,
       lastName: row.author_last_name,
+      bio: row.author_bio,
       profileImageUrl: row.author_profile_image_url,
       role: row.author_role,
-      createdAt: row.author_created_at,
-      emailVerified: row.author_email_verified,
-    } : undefined;
+    } as User : undefined;
 
     // Reconstruct reporter object
     const reporter = row.reporter_id ? {
       id: row.reporter_id,
-      email: row.reporter_email,
       firstName: row.reporter_first_name,
       lastName: row.reporter_last_name,
+      bio: row.reporter_bio,
       profileImageUrl: row.reporter_profile_image_url,
       role: row.reporter_role,
-    } : undefined;
+    } as User : undefined;
 
     // Reconstruct staff member object
     const staffMember = row.staff_id ? {
@@ -4322,6 +4434,14 @@ export class DatabaseStorage implements IStorage {
 
   async getFeaturedArticle(userId?: string): Promise<ArticleWithDetails | undefined> {
     const reporterAlias = aliasedTable(users, 'reporter');
+    const reporterSummaryColumns = {
+      id: reporterAlias.id,
+      firstName: reporterAlias.firstName,
+      lastName: reporterAlias.lastName,
+      profileImageUrl: reporterAlias.profileImageUrl,
+      role: reporterAlias.role,
+      bio: reporterAlias.bio,
+    };
     
     // Get AI category IDs to exclude
     const aiCategories = await db
@@ -4356,10 +4476,10 @@ export class DatabaseStorage implements IStorage {
     
     let results = await db
       .select({
-        article: articles,
-        category: categories,
-        author: users,
-        reporter: reporterAlias,
+        article: articleSummaryColumns,
+        category: categorySummaryColumns,
+        author: authorSummaryColumns,
+        reporter: reporterSummaryColumns,
       })
       .from(articles)
       .leftJoin(categories, eq(articles.categoryId, categories.id))
@@ -4373,10 +4493,10 @@ export class DatabaseStorage implements IStorage {
     if (results.length === 0) {
       results = await db
         .select({
-          article: articles,
-          category: categories,
-          author: users,
-          reporter: reporterAlias,
+          article: articleSummaryColumns,
+          category: categorySummaryColumns,
+          author: authorSummaryColumns,
+          reporter: reporterSummaryColumns,
         })
         .from(articles)
         .leftJoin(categories, eq(articles.categoryId, categories.id))
@@ -4390,11 +4510,11 @@ export class DatabaseStorage implements IStorage {
     if (results.length === 0) return undefined;
 
     const result = results[0];
-    return {
-      ...result.article,
-      category: result.category || undefined,
-      author: result.reporter || result.author || undefined,
-    };
+    return toArticleSummaryWithDetails(result.article, {
+      category: result.category,
+      author: result.author,
+      reporter: result.reporter,
+    });
   }
 
 
@@ -4436,10 +4556,10 @@ export class DatabaseStorage implements IStorage {
     // displayOrder is for homepage curation, related articles should show recent content
     const results = await db
       .select({
-        article: articles,
-        category: categories,
-        author: users,
-        reporter: reporterAlias,
+        article: articleSummaryColumns,
+        category: categorySummaryColumns,
+        author: authorSummaryColumns,
+        reporter: reporterSummaryColumns,
       })
       .from(articles)
       .leftJoin(categories, eq(articles.categoryId, categories.id))
@@ -4449,11 +4569,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(articles.publishedAt))
       .limit(5);
 
-    return results.map((r) => ({
-      ...r.article,
-      category: r.category || undefined,
-      author: r.reporter || r.author || undefined,
-    }));
+    return results.map((r) =>
+      toArticleSummaryWithDetails(r.article, {
+        category: r.category,
+        author: r.author,
+        reporter: r.reporter,
+      })
+    );
   }
 
   async getArticlesMetrics(): Promise<{ published: number; scheduled: number; draft: number; archived: number }> {
@@ -6016,11 +6138,48 @@ export class DatabaseStorage implements IStorage {
 
   // Reading history operations
   async recordArticleRead(userId: string, articleId: string, duration?: number): Promise<void> {
-    await db.insert(readingHistory).values({
-      userId,
-      articleId,
-      readDuration: duration,
-    });
+    const normalizedDuration =
+      typeof duration === "number" && Number.isFinite(duration)
+        ? Math.max(0, Math.round(duration))
+        : null;
+
+    const updateDurationSql =
+      normalizedDuration === null
+        ? sql`${readingHistory.readDuration}`
+        : sql`CASE
+            WHEN ${readingHistory.readDuration} IS NULL THEN ${normalizedDuration}
+            ELSE GREATEST(${readingHistory.readDuration}, ${normalizedDuration})
+          END`;
+
+    const insertDurationSql =
+      normalizedDuration === null ? sql`NULL` : sql`${normalizedDuration}`;
+
+    await db.execute(sql`
+      WITH existing AS (
+        SELECT ${readingHistory.id}
+        FROM ${readingHistory}
+        WHERE ${readingHistory.userId} = ${userId}
+          AND ${readingHistory.articleId} = ${articleId}
+          AND ${readingHistory.readAt} >= NOW() - INTERVAL '24 hours'
+        ORDER BY ${readingHistory.readAt} DESC
+        LIMIT 1
+      ),
+      updated AS (
+        UPDATE ${readingHistory}
+        SET
+          ${readingHistory.readAt} = NOW(),
+          ${readingHistory.readDuration} = ${updateDurationSql}
+        WHERE ${readingHistory.id} IN (SELECT ${readingHistory.id} FROM existing)
+        RETURNING ${readingHistory.id}
+      )
+      INSERT INTO ${readingHistory} (
+        ${readingHistory.userId},
+        ${readingHistory.articleId},
+        ${readingHistory.readDuration}
+      )
+      SELECT ${userId}, ${articleId}, ${insertDurationSql}
+      WHERE NOT EXISTS (SELECT 1 FROM updated)
+    `);
   }
 
   // Update reading progress with scroll depth and completion rate
@@ -6078,13 +6237,21 @@ export class DatabaseStorage implements IStorage {
 
   async getUserReadingHistory(userId: string, limit: number = 20): Promise<ArticleWithDetails[]> {
     const reporterAlias = aliasedTable(users, 'reporter');
+    const reporterSummaryColumns = {
+      id: reporterAlias.id,
+      firstName: reporterAlias.firstName,
+      lastName: reporterAlias.lastName,
+      profileImageUrl: reporterAlias.profileImageUrl,
+      role: reporterAlias.role,
+      bio: reporterAlias.bio,
+    };
     
     const results = await db
       .select({
-        article: articles,
-        category: categories,
-        author: users,
-        reporter: reporterAlias,
+        article: articleSummaryColumns,
+        category: categorySummaryColumns,
+        author: authorSummaryColumns,
+        reporter: reporterSummaryColumns,
       })
       .from(readingHistory)
       .innerJoin(articles, eq(readingHistory.articleId, articles.id))
@@ -6095,11 +6262,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(readingHistory.readAt))
       .limit(limit);
 
-    return results.map((r) => ({
-      ...r.article,
-      category: r.category || undefined,
-      author: r.reporter || r.author || undefined,
-    }));
+    return results.map((r) =>
+      toArticleSummaryWithDetails(r.article, {
+        category: r.category,
+        author: r.author,
+        reporter: r.reporter,
+      })
+    );
   }
 
   // Recommendation operations
@@ -6387,6 +6556,12 @@ export class DatabaseStorage implements IStorage {
     console.log(`[Smart Recommendations] Fetching personalized recommendations for user: ${userId}, limit: ${limit}`);
     
     const sanitizedLimit = Math.min(Math.max(limit, 1), 50);
+    const cacheKey = `recommendations:personalized:${userId}:${sanitizedLimit}`;
+    const cachedRecommendations = memoryCache.get<ArticleWithDetails[]>(cacheKey);
+    if (cachedRecommendations) {
+      return cachedRecommendations;
+    }
+
     console.log(`[Smart Recommendations] Sanitized limit: ${sanitizedLimit}`);
 
     const results = await db.execute(sql`
@@ -6600,7 +6775,7 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`[Smart Recommendations] Found ${results.rows.length} recommendations for user ${userId}`);
 
-    return (results.rows as any[]).map((row) => ({
+    const recommendations = (results.rows as any[]).map((row) => ({
       id: row.id,
       title: row.title,
       subtitle: row.subtitle,
@@ -6744,10 +6919,12 @@ export class DatabaseStorage implements IStorage {
         createdAt: row.reporter_created_at,
       } : undefined,
     }));
+
+    memoryCache.set(cacheKey, recommendations, CACHE_TTL.SHORT);
+    return recommendations;
   }
 
   async getContinueReading(userId: string, limit: number = 5): Promise<Array<ArticleWithDetails & { progress: number; lastReadAt: Date }>> {
-    // Use raw SQL with DISTINCT ON to get unique articles with their max progress
     const query = sql`
       WITH article_progress AS (
         SELECT DISTINCT ON (rh.article_id)
@@ -6763,60 +6940,22 @@ export class DatabaseStorage implements IStorage {
         ORDER BY rh.article_id, rh.read_at DESC
       )
       SELECT 
-        a.id, a.title, a.subtitle, a.slug, a.english_slug, a.excerpt,
-        a.image_url, a.thumbnail_url, a.infographic_banner_url, a.image_focal_point,
-        a.category_id, a.author_id, a.reporter_id, a.article_type, a.news_type,
-        a.status, a.hide_from_homepage, a.ai_summary, a.ai_generated,
-        a.is_featured, a.display_order, a.views, a.seo, a.credibility_score,
-        a.source, a.source_url, a.is_ai_generated_image, a.is_ai_generated_thumbnail,
-        a.is_publisher_content, a.is_publisher_news, a.publisher_id, a.publisher_status,
-        a.published_at, a.created_at, a.updated_at,
-        c.id as category_id,
-        c.name_ar as category_name_ar,
-        c.name_en as category_name_en,
-        c.slug as category_slug,
-        c.description as category_description,
-        c.color as category_color,
-        c.icon as category_icon,
-        c.hero_image_url as category_hero_image_url,
-        c.display_order as category_display_order,
-        c.status as category_status,
-        c.created_at as category_created_at,
-        u.id as author_id,
-        u.email as author_email,
-        u.first_name as author_first_name,
-        u.last_name as author_last_name,
-        u.bio as author_bio,
-        u.phone_number as author_phone_number,
-        u.profile_image_url as author_profile_image_url,
-        u.role as author_role,
-        u.status as author_status,
-        u.is_profile_complete as author_is_profile_complete,
-        u.email_verified as author_email_verified,
-        u.phone_verified as author_phone_verified,
-        u.verification_badge as author_verification_badge,
-        u.created_at as author_created_at,
-        r.id as reporter_id,
-        r.email as reporter_email,
-        r.first_name as reporter_first_name,
-        r.last_name as reporter_last_name,
-        r.bio as reporter_bio,
-        r.phone_number as reporter_phone_number,
-        r.profile_image_url as reporter_profile_image_url,
-        r.role as reporter_role,
-        r.status as reporter_status,
-        r.is_profile_complete as reporter_is_profile_complete,
-        r.email_verified as reporter_email_verified,
-        r.phone_verified as reporter_phone_verified,
-        r.verification_badge as reporter_verification_badge,
-        r.created_at as reporter_created_at,
+        a.id,
+        a.title,
+        a.subtitle,
+        a.slug,
+        a.english_slug,
+        a.excerpt,
+        a.image_url,
+        a.thumbnail_url,
+        a.image_focal_point,
+        a.article_type,
+        a.published_at,
+        a.updated_at,
         ap.max_progress as progress,
         ap.last_read_at
       FROM article_progress ap
       INNER JOIN articles a ON a.id = ap.article_id
-      LEFT JOIN categories c ON c.id = a.category_id
-      LEFT JOIN users u ON u.id = a.author_id
-      LEFT JOIN users r ON r.id = a.reporter_id
       LEFT JOIN dismissed_continue_reading dcr ON dcr.article_id = ap.article_id AND dcr.user_id = ${userId}
       WHERE a.status = 'published'
         AND ap.max_progress < 75
@@ -6832,142 +6971,16 @@ export class DatabaseStorage implements IStorage {
       title: row.title,
       subtitle: row.subtitle,
       slug: row.slug,
+      englishSlug: row.english_slug,
       content: '',
       excerpt: row.excerpt,
       imageUrl: row.image_url,
-      imageFocalPoint: row.image_focal_point,
-      categoryId: row.category_id,
-      authorId: row.author_id,
-      reporterId: row.reporter_id,
-      articleType: row.article_type,
-      newsType: row.news_type,
-      publishType: row.publish_type,
-      scheduledAt: row.scheduled_at,
-      status: row.status,
-      reviewStatus: null,
-      reviewedBy: null,
-      reviewedAt: null,
-      reviewNotes: null,
-      hideFromHomepage: row.hide_from_homepage,
-      aiSummary: row.ai_summary,
-      aiGenerated: row.ai_generated,
-      isFeatured: row.is_featured,
-      displayOrder: row.display_order,
-      views: row.views,
-      seo: row.seo,
-      seoMetadata: null,
-      credibilityScore: row.credibility_score,
-      credibilityAnalysis: null,
-      credibilityLastUpdated: row.credibility_last_updated,
-      source: row.source,
-      sourceMetadata: null,
-      sourceUrl: row.source_url,
-      verifiedBy: null,
-      verifiedAt: null,
       thumbnailUrl: row.thumbnail_url,
-      isAiGeneratedImage: row.is_ai_generated_image,
-      aiImageModel: row.ai_image_model,
-      aiImagePrompt: row.ai_image_prompt,
-      isAiGeneratedThumbnail: row.is_ai_generated_thumbnail,
-      aiThumbnailModel: row.ai_thumbnail_model,
-      aiThumbnailPrompt: row.ai_thumbnail_prompt,
-      isPublisherContent: row.is_publisher_content || false,
-      publisherStatus: row.publisher_status || null,
-      publisherReviewedBy: row.publisher_reviewed_by || null,
-      publisherReviewedAt: row.publisher_reviewed_at || null,
-      publisherReviewNotes: row.publisher_review_notes || null,
-      isPublisherNews: row.is_publisher_news || false,
-      publisherId: row.publisher_id || null,
-      publisherCreditDeducted: false,
-      publisherSubmittedAt: null,
-      publisherApprovedAt: null,
-      publisherApprovedBy: null,
-      createdAt: row.created_at,
+      imageFocalPoint: row.image_focal_point,
+      articleType: row.article_type,
+      status: 'published',
+      publishedAt: row.published_at,
       updatedAt: row.updated_at,
-      category: row.category_id ? {
-        id: row.category_id,
-        nameAr: row.category_name_ar,
-        nameEn: row.category_name_en,
-        slug: row.category_slug,
-        description: row.category_description,
-        color: row.category_color,
-        icon: row.category_icon,
-        heroImageUrl: row.category_hero_image_url,
-        displayOrder: row.category_display_order,
-        status: row.category_status,
-        createdAt: row.category_created_at,
-      } : undefined,
-      author: row.author_id ? {
-        id: row.author_id,
-        email: row.author_email,
-        passwordHash: null,
-        firstName: row.author_first_name,
-        lastName: row.author_last_name,
-        bio: row.author_bio,
-        phoneNumber: row.author_phone_number,
-        profileImageUrl: row.author_profile_image_url,
-        role: row.author_role,
-        status: row.author_status,
-        isProfileComplete: row.author_is_profile_complete,
-        emailVerified: row.author_email_verified || false,
-        phoneVerified: row.author_phone_verified || false,
-        verificationBadge: row.author_verification_badge || 'none',
-        twoFactorSecret: null,
-        twoFactorEnabled: false,
-        twoFactorBackupCodes: null,
-        twoFactorMethod: 'authenticator',
-        lastActivityAt: null,
-        suspendedUntil: null,
-        suspensionReason: null,
-        bannedUntil: null,
-        banReason: null,
-        accountLocked: false,
-        lockedUntil: null,
-        failedLoginAttempts: 0,
-        deletedAt: null,
-        authProvider: 'local',
-        googleId: null,
-        appleId: null,
-        firstNameEn: null,
-        lastNameEn: null,
-        allowedLanguages: ['ar'],
-        createdAt: row.author_created_at,
-      } : row.reporter_id ? {
-        id: row.reporter_id,
-        email: row.reporter_email,
-        passwordHash: null,
-        firstName: row.reporter_first_name,
-        lastName: row.reporter_last_name,
-        bio: row.reporter_bio,
-        phoneNumber: row.reporter_phone_number,
-        profileImageUrl: row.reporter_profile_image_url,
-        role: row.reporter_role,
-        status: row.reporter_status,
-        isProfileComplete: row.reporter_is_profile_complete,
-        emailVerified: row.reporter_email_verified || false,
-        phoneVerified: row.reporter_phone_verified || false,
-        verificationBadge: row.reporter_verification_badge || 'none',
-        twoFactorSecret: null,
-        twoFactorEnabled: false,
-        twoFactorBackupCodes: null,
-        twoFactorMethod: 'authenticator',
-        lastActivityAt: null,
-        suspendedUntil: null,
-        suspensionReason: null,
-        bannedUntil: null,
-        banReason: null,
-        accountLocked: false,
-        lockedUntil: null,
-        failedLoginAttempts: 0,
-        deletedAt: null,
-        authProvider: 'local',
-        googleId: null,
-        appleId: null,
-        firstNameEn: null,
-        lastNameEn: null,
-        allowedLanguages: ['ar'],
-        createdAt: row.reporter_created_at,
-      } : undefined,
       progress: Math.round(Number(row.progress) || 0),
       lastReadAt: row.last_read_at,
     })) as Array<ArticleWithDetails & { progress: number; lastReadAt: Date }>;
@@ -20766,17 +20779,109 @@ export class DatabaseStorage implements IStorage {
   async calculateAllEngagementScores(): Promise<void> {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    // Get all articles with recent activity
-    const recentArticles = await db
-      .select({ articleId: readingHistory.articleId })
-      .from(readingHistory)
-      .where(gte(readingHistory.readAt, thirtyDaysAgo))
-      .groupBy(readingHistory.articleId);
-    
-    for (const article of recentArticles) {
-      await this.calculateArticleEngagementScore(article.articleId);
-    }
+
+    // Batch the full recalculation into a single upsert query to avoid one query set per article.
+    await db.execute(sql`
+      WITH recent_articles AS (
+        SELECT DISTINCT ${readingHistory.articleId} AS article_id
+        FROM ${readingHistory}
+        WHERE ${readingHistory.readAt} >= ${thirtyDaysAgo}
+      ),
+      reading_stats AS (
+        SELECT
+          ${readingHistory.articleId} AS article_id,
+          COALESCE(AVG(${readingHistory.readDuration}), 0)::int AS avg_time_on_page,
+          COALESCE(AVG(${readingHistory.scrollDepth}), 0)::real AS avg_scroll_depth,
+          COALESCE(AVG(${readingHistory.engagementScore}), 0)::real AS engagement_rate,
+          COUNT(DISTINCT ${readingHistory.userId})::int AS unique_visitors
+        FROM ${readingHistory}
+        WHERE ${readingHistory.readAt} >= ${thirtyDaysAgo}
+        GROUP BY ${readingHistory.articleId}
+      ),
+      reaction_counts AS (
+        SELECT
+          ${reactions.articleId} AS article_id,
+          COUNT(*)::int AS reaction_count
+        FROM ${reactions}
+        WHERE ${reactions.articleId} IN (SELECT article_id FROM recent_articles)
+        GROUP BY ${reactions.articleId}
+      ),
+      comment_counts AS (
+        SELECT
+          ${comments.articleId} AS article_id,
+          COUNT(*)::int AS comment_count
+        FROM ${comments}
+        WHERE ${comments.articleId} IN (SELECT article_id FROM recent_articles)
+        GROUP BY ${comments.articleId}
+      ),
+      bookmark_counts AS (
+        SELECT
+          ${bookmarks.articleId} AS article_id,
+          COUNT(*)::int AS bookmark_count
+        FROM ${bookmarks}
+        WHERE ${bookmarks.articleId} IN (SELECT article_id FROM recent_articles)
+        GROUP BY ${bookmarks.articleId}
+      ),
+      scored AS (
+        SELECT
+          recent_articles.article_id,
+          COALESCE(reading_stats.engagement_rate, 0)::real AS engagement_rate,
+          COALESCE(reading_stats.avg_time_on_page, 0)::int AS avg_time_on_page,
+          COALESCE(reading_stats.avg_scroll_depth, 0)::real AS avg_scroll_depth,
+          COALESCE(reaction_counts.reaction_count, 0)::int AS reaction_count,
+          COALESCE(comment_counts.comment_count, 0)::int AS comment_count,
+          COALESCE(bookmark_counts.bookmark_count, 0)::int AS bookmark_count,
+          COALESCE(reading_stats.unique_visitors, 0)::int AS unique_visitors,
+          (
+            (COALESCE(reading_stats.engagement_rate, 0) * 0.3) +
+            ((COALESCE(reading_stats.avg_scroll_depth, 0) / 100.0) * 0.2) +
+            ((LEAST(COALESCE(reading_stats.avg_time_on_page, 0), 300) / 300.0) * 0.2) +
+            (LEAST(COALESCE(reaction_counts.reaction_count, 0) / 100.0, 1) * 0.1) +
+            (LEAST(COALESCE(comment_counts.comment_count, 0) / 20.0, 1) * 0.1) +
+            (LEAST(COALESCE(bookmark_counts.bookmark_count, 0) / 50.0, 1) * 0.1)
+          )::real AS overall_score
+        FROM recent_articles
+        LEFT JOIN reading_stats ON reading_stats.article_id = recent_articles.article_id
+        LEFT JOIN reaction_counts ON reaction_counts.article_id = recent_articles.article_id
+        LEFT JOIN comment_counts ON comment_counts.article_id = recent_articles.article_id
+        LEFT JOIN bookmark_counts ON bookmark_counts.article_id = recent_articles.article_id
+      )
+      INSERT INTO ${articleEngagementScores} (
+        ${articleEngagementScores.articleId},
+        ${articleEngagementScores.overallScore},
+        ${articleEngagementScores.engagementRate},
+        ${articleEngagementScores.avgTimeOnPage},
+        ${articleEngagementScores.avgScrollDepth},
+        ${articleEngagementScores.reactionCount},
+        ${articleEngagementScores.commentCount},
+        ${articleEngagementScores.bookmarkCount},
+        ${articleEngagementScores.uniqueVisitors},
+        ${articleEngagementScores.lastCalculated}
+      )
+      SELECT
+        scored.article_id,
+        scored.overall_score,
+        scored.engagement_rate,
+        scored.avg_time_on_page,
+        scored.avg_scroll_depth,
+        scored.reaction_count,
+        scored.comment_count,
+        scored.bookmark_count,
+        scored.unique_visitors,
+        NOW()
+      FROM scored
+      ON CONFLICT (${articleEngagementScores.articleId}) DO UPDATE
+      SET
+        ${articleEngagementScores.overallScore} = EXCLUDED.${articleEngagementScores.overallScore},
+        ${articleEngagementScores.engagementRate} = EXCLUDED.${articleEngagementScores.engagementRate},
+        ${articleEngagementScores.avgTimeOnPage} = EXCLUDED.${articleEngagementScores.avgTimeOnPage},
+        ${articleEngagementScores.avgScrollDepth} = EXCLUDED.${articleEngagementScores.avgScrollDepth},
+        ${articleEngagementScores.reactionCount} = EXCLUDED.${articleEngagementScores.reactionCount},
+        ${articleEngagementScores.commentCount} = EXCLUDED.${articleEngagementScores.commentCount},
+        ${articleEngagementScores.bookmarkCount} = EXCLUDED.${articleEngagementScores.bookmarkCount},
+        ${articleEngagementScores.uniqueVisitors} = EXCLUDED.${articleEngagementScores.uniqueVisitors},
+        ${articleEngagementScores.lastCalculated} = EXCLUDED.${articleEngagementScores.lastCalculated}
+    `);
   }
 
   // ============================================
