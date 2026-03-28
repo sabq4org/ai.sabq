@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { db, pool } from "./db";
 import { users, canUserLogin, getUserStatusMessage } from "@shared/schema";
@@ -17,12 +18,37 @@ import { getRedisClient } from "./redis";
 import { RedisStore } from "connect-redis";
 import type { RedisSessionClient } from "./redis";
 
+function resolveSessionSecret(): string {
+  const configuredSecret = process.env.SESSION_SECRET?.trim();
+  if (configuredSecret) {
+    return configuredSecret;
+  }
+
+  const derivationSource =
+    process.env.NEON_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    process.env.REPL_ID ||
+    process.env.HOSTNAME;
+
+  if (derivationSource) {
+    console.warn(
+      "[Session] SESSION_SECRET is not set. Using a deterministic fallback derived from deployment secrets. Set SESSION_SECRET explicitly for stable multi-instance sessions."
+    );
+    return crypto
+      .createHash("sha256")
+      .update(`sabq-session:${derivationSource}`)
+      .digest("hex");
+  }
+
+  console.warn(
+    "[Session] SESSION_SECRET is not set and no stable derivation source is available. Using an ephemeral fallback secret for this process only."
+  );
+  return crypto.randomBytes(32).toString("hex");
+}
+
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const sessionSecret = process.env.SESSION_SECRET;
-  if (!sessionSecret) {
-    throw new Error("SESSION_SECRET environment variable is required. Set it before starting the server.");
-  }
+  const sessionSecret = resolveSessionSecret();
 
   let store: session.Store;
   const redis = getRedisClient();
