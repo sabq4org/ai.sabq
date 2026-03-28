@@ -162,6 +162,18 @@ function normalizeOriginForComparison(origin: string): string {
 }
 
 app.use((req: Request, res: Response, next: NextFunction) => {
+  const isStaticAssetRequest =
+    req.path.startsWith('/assets/') ||
+    req.path.startsWith('/branding/') ||
+    req.path.startsWith('/uploads/') ||
+    req.path === '/service-worker.js' ||
+    req.path === '/favicon.ico' ||
+    /\.(js|css|map|mjs|cjs|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|json|txt|xml)$/i.test(req.path);
+
+  if (isStaticAssetRequest) {
+    return next();
+  }
+
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) {
