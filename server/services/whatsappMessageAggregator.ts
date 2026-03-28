@@ -407,6 +407,13 @@ export async function processAggregatedMessage(pending: PendingWhatsappMessage):
 
 export async function processExpiredMessages(): Promise<void> {
   try {
+    if (!db) {
+      console.warn(
+        "[WhatsApp Aggregator] Database client unavailable; skipping pending message processing"
+      );
+      return;
+    }
+
     const expiredMessages = await storage.getExpiredPendingMessages();
     
     if (expiredMessages.length === 0) {

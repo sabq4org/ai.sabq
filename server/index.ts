@@ -815,10 +815,16 @@ function getDatabaseEnvStatus():
 
     try {
       const { pool } = await import("./db");
+      if (!pool) {
+        console.warn(
+          "[Server] ⚠️  Database client is unavailable; skipping warmup and continuing in degraded mode"
+        );
+      } else {
       const client = await pool.connect();
       await client.query('SELECT 1');
       client.release();
       databaseWarmedUp = true;
+      }
     } catch (error) {
       console.error("[Server] ⚠️  Database warmup failed; server will stay unready:", error);
 
