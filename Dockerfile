@@ -28,6 +28,7 @@ USER sabq
 
 ENV NODE_ENV=production
 ENV PORT=5000
+ENV UPLOADS_DIR=/tmp/sabq-uploads
 
 EXPOSE 5000
 

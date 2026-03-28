@@ -8,6 +8,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import fs from "fs";
 import path from "path";
+import { uploadsRootDir } from "./uploadsDir";
 
 process.on('uncaughtException', (error) => {
   console.error('[CRITICAL] Uncaught Exception:', error.message);
@@ -259,11 +260,8 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })); // Increased for base64 image uploads
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Prefer the legacy Replit uploads path when available, otherwise use the local workspace.
-const replitUploadsDir = '/home/runner/workspace/uploads';
-const uploadsDir = fs.existsSync(replitUploadsDir) ? replitUploadsDir : path.resolve(process.cwd(), 'uploads');
-app.use('/uploads', express.static(uploadsDir));
-console.log(`[Server] ✅ Static uploads directory configured: ${uploadsDir}`);
+app.use('/uploads', express.static(uploadsRootDir));
+console.log(`[Server] ✅ Static uploads directory configured: ${uploadsRootDir}`);
 
 // Serve static files from public directory (for branding, logos, etc.)
 const publicDir = path.join(process.cwd(), 'public');

@@ -11,6 +11,7 @@ import { articles } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import fetch from 'node-fetch';
 import { ObjectStorageService } from '../objectStorage';
+import { getUploadsSubdirectory } from '../uploadsDir';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -77,12 +78,11 @@ async function uploadToStorage(
     // Fallback to local storage (temporary - will warn)
     console.warn(`[AI Smart Thumbnail] ⚠️ Falling back to temporary local storage - files may be lost!`);
     const fs = await import('fs/promises');
-    const pathModule = await import('path');
-    const uploadDir = pathModule.join(process.cwd(), 'uploads', 'ai-thumbnails');
+    const uploadDir = getUploadsSubdirectory('ai-thumbnails');
     
     await fs.mkdir(uploadDir, { recursive: true });
     
-    const filepath = pathModule.join(uploadDir, filename);
+    const filepath = `${uploadDir}/${filename}`;
     await fs.writeFile(filepath, buffer);
     
     return `/uploads/ai-thumbnails/${filename}`;

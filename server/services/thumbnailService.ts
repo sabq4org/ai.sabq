@@ -10,6 +10,7 @@ import { articles } from '@shared/schema';
 import { eq, desc } from 'drizzle-orm';
 import fetch from 'node-fetch';
 import path from 'path';
+import { getUploadsSubdirectory } from '../uploadsDir';
 
 interface FocalPoint {
   x: number;
@@ -352,7 +353,7 @@ async function saveToLocalStorage(
   filename: string
 ): Promise<string> {
   const fs = await import('fs/promises');
-  const uploadDir = path.join(process.cwd(), 'uploads', 'thumbnails');
+  const uploadDir = getUploadsSubdirectory('thumbnails');
   
   // Ensure directory exists
   await fs.mkdir(uploadDir, { recursive: true });
