@@ -10,7 +10,7 @@ import { LiveRegionProvider } from "@/contexts/LiveRegionContext";
 import { VoiceAssistantProvider } from "@/contexts/VoiceAssistantContext";
 import { SkipLinks } from "@/components/SkipLinks";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { lazy, Suspense, Component, ErrorInfo, ReactNode } from "react";
+import { lazy, Suspense, Component, ErrorInfo, ReactNode, useEffect } from "react";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { resetAdsTriggerFlag } from "@/components/DmsAdSlot";
