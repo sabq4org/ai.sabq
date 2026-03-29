@@ -343,6 +343,17 @@ declare global {
 let hasTriggeredAdsForCurrentPage = false;
 let currentPageUrl = '';
 
+function hasAdSignalContext() {
+  if (typeof window === 'undefined' || !window.signal) return false;
+
+  return Boolean(
+    window.signal.Page?.ChannelLevel1 ||
+      window.signal.Content?.Topic ||
+      window.signal.Content?.ArticleId ||
+      window.signal.Content?.SearchTerm
+  );
+}
+
 export function resetAdsTriggerFlag() {
   hasTriggeredAdsForCurrentPage = false;
   currentPageUrl = '';
@@ -350,6 +361,7 @@ export function resetAdsTriggerFlag() {
 
 export function triggerAds() {
   if (typeof window === 'undefined') return;
+  if (!hasAdSignalContext()) return;
   
   const now = window.location.href;
   if (hasTriggeredAdsForCurrentPage && currentPageUrl === now) {
@@ -368,6 +380,7 @@ export function triggerAds() {
 
 export function forceTriggerAds() {
   if (typeof window === 'undefined') return;
+  if (!hasAdSignalContext()) return;
   if (window.dataLayer && Array.isArray(window.dataLayer)) {
     window.dataLayer.push({
       event: 'triggerAds'
