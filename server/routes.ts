@@ -13376,21 +13376,22 @@ Respond in valid JSON format only:
       const userId = req.user?.id;
       const userRole = req.user?.role;
       const slug = req.params.slug;
-      
-      // Use cache for published articles only
-      const cacheKey = `article:detail:${slug}`;
-      const article = await withCache(cacheKey, CACHE_TTL.MEDIUM, async () => {
-        const fetchedArticle = await storage.getArticleBySlug(slug, userId, userRole);
-        // Only cache published articles
-        if (fetchedArticle && fetchedArticle.status === 'published') {
-          return fetchedArticle;
-        }
-        return null; // Don't cache non-published articles
-      });
-      
-      // If cache returned null, fetch again without caching (for non-published articles)
-      let finalArticle = article;
-      if (!article) {
+
+      const shouldUseSharedCache = !userId && !userRole;
+      let finalArticle = null;
+
+      if (shouldUseSharedCache) {
+        const cacheKey = `article:detail:${slug}`;
+        finalArticle = await withCache(cacheKey, CACHE_TTL.MEDIUM, async () => {
+          const fetchedArticle = await storage.getArticleBySlug(slug);
+          if (fetchedArticle && fetchedArticle.status === 'published') {
+            return fetchedArticle;
+          }
+          return null;
+        });
+      }
+
+      if (!finalArticle) {
         finalArticle = await storage.getArticleBySlug(slug, userId, userRole);
       }
 
@@ -13404,7 +13405,14 @@ Respond in valid JSON format only:
       }
 
       if (userId) {
-        await storage.recordArticleRead(userId, finalArticle.id);
+        storage.recordArticleRead(userId, finalArticle.id).catch((recordError) => {
+          console.error("Non-fatal article read tracking error:", {
+            articleId: finalArticle.id,
+            userId,
+            slug,
+            error: recordError,
+          });
+        });
       }
 
 
