@@ -151,19 +151,20 @@ export const CACHE_DURATIONS = {
 // Autoscale-optimized cache preset for critical endpoints
 // Uses aggressive edge caching with stale-while-revalidate for cold start resilience
 // IMPORTANT: These settings are crucial for Autoscale performance - Cloudflare CDN
-// caches responses at edge, reducing load on origin servers during cold starts
+// caches responses at edge, reducing load on origin servers during cold starts.
+// stale-while-revalidate is set high to serve stale content while origin warms up from cold start.
 export const AUTOSCALE_CACHE = {
-  // Homepage - short edge cache (15s) for near-realtime news updates on mobile pull-to-refresh
-  // Google Cloud proxy respects s-maxage, so keep it low to avoid stale content on iOS
-  HOMEPAGE: { maxAge: 0, sMaxAge: 15, staleWhileRevalidate: 15 },
-  // API feeds - moderate browser cache (1 min), longer edge cache (5 min)
-  FEEDS: { maxAge: 60, sMaxAge: 300, staleWhileRevalidate: 300 },
-  // Article pages - moderate caching (2 min browser, 10 min edge)
-  ARTICLE: { maxAge: 120, sMaxAge: 600, staleWhileRevalidate: 300 },
-  // Static lists (categories, etc) - long caching with stale-while-revalidate for cold starts
-  STATIC: { maxAge: 3600, sMaxAge: 7200, staleWhileRevalidate: 3600 },
-  // Dashboard stats - edge cache only, no browser cache (3 min edge)
-  DASHBOARD: { maxAge: 0, sMaxAge: 180, staleWhileRevalidate: 300 },
+  // Homepage — 60s edge cache with 120s stale-while-revalidate.
+  // During cold starts (2-8s), Cloudflare serves stale content instantly while refreshing in background.
+  HOMEPAGE: { maxAge: 0, sMaxAge: 60, staleWhileRevalidate: 120 },
+  // API feeds — 1min browser, 10min edge, 10min stale-while-revalidate
+  FEEDS: { maxAge: 60, sMaxAge: 600, staleWhileRevalidate: 600 },
+  // Article pages — 2min browser, 15min edge, 10min stale-while-revalidate
+  ARTICLE: { maxAge: 120, sMaxAge: 900, staleWhileRevalidate: 600 },
+  // Static lists (categories, etc) — 1hr browser, 4hr edge, 2hr stale-while-revalidate
+  STATIC: { maxAge: 3600, sMaxAge: 14400, staleWhileRevalidate: 7200 },
+  // Dashboard stats — edge cache only, 5min edge, 10min stale-while-revalidate
+  DASHBOARD: { maxAge: 0, sMaxAge: 300, staleWhileRevalidate: 600 },
 } as const;
 
 // Private cache for authenticated dashboard endpoints
