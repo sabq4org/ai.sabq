@@ -229,20 +229,18 @@ async function prerenderHomepage(request, origin) {
   }
 
   try {
-    var results = await Promise.all([
-      fetch(request),
-      fetch(origin + HOMEPAGE_API_PATH, {
-        method: 'GET',
-        headers: { 'User-Agent': 'Cloudflare-Worker/1.0', 'Accept': 'application/json' }
-      })
-    ]);
+    var htmlResponse = await fetch(request, { cf: { cacheEverything: true } });
 
-    var htmlResponse = results[0];
-    var apiResponse = results[1];
-
-    if (!htmlResponse.ok) return htmlResponse;
+    if (!htmlResponse.ok) {
+      return htmlResponse;
+    }
 
     var html = await htmlResponse.text();
+
+    var apiResponse = await fetch(origin + HOMEPAGE_API_PATH, {
+      method: 'GET',
+      headers: { 'User-Agent': 'Cloudflare-Worker/1.0', 'Accept': 'application/json' }
+    });
     var apiData = apiResponse.ok ? await apiResponse.text() : 'null';
 
     var injection = '<script>window.__HOMEPAGE_DATA__=' + apiData + ';</script>';
@@ -252,7 +250,7 @@ async function prerenderHomepage(request, origin) {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, s-maxage=' + HOMEPAGE_CACHE_TTL + ', stale-while-revalidate=120',
+        'Cache-Control': 'public, max-age=0, s-maxage=' + HOMEPAGE_CACHE_TTL + ', stale-while-revalidate=120',
         'X-Prerendered': 'true'
       }
     });
@@ -269,7 +267,7 @@ async function prerenderHomepage(request, origin) {
     return response;
   } catch (error) {
     console.error('[Prerender] Error:', error);
-    return fetch(request);
+    return fetch(request, { cf: { cacheEverything: true } });
   }
 }
 
@@ -288,7 +286,9 @@ function stripGaesaAndFixHeaders(response, isAuthenticated) {
   var needsStrip = setCookie.indexOf('GAESA') !== -1;
   var cacheControl = response.headers.get('cache-control') || '';
   var isHtml = (response.headers.get('content-type') || '').indexOf('text/html') !== -1;
-  var needsFixCache = !isAuthenticated && isHtml && cacheControl.indexOf('no-store') !== -1;
+  var hasSMaxAge = cacheControl.indexOf('s-maxage') !== -1;
+  var hasBadDirective = cacheControl.indexOf('no-store') !== -1 || cacheControl.indexOf('no-cache') !== -1;
+  var needsFixCache = !isAuthenticated && isHtml && hasSMaxAge && hasBadDirective;
 
   if (!needsStrip && !needsFixCache) {
     return response;
@@ -327,8 +327,10 @@ async function handleRequest(request) {
   
   var classification = classifyRequest(pathname);
   
+  var cfCacheOptions = isAuthenticated ? {} : { cf: { cacheEverything: true } };
+
   if (!classification.shouldCheck) {
-    var response = await fetch(request);
+    var response = await fetch(request, cfCacheOptions);
     return stripGaesaAndFixHeaders(response, isAuthenticated);
   }
 
@@ -349,10 +351,40 @@ async function handleRequest(request) {
     });
   }
 
-  var originResponse = await fetch(request);
+  var originResponse = await fetch(request, cfCacheOptions);
   return stripGaesaAndFixHeaders(originResponse, isAuthenticated);
 }
 
 addEventListener('fetch', function(event) {
-  event.respondWith(handleRequest(event.request));
+  event.respondWith(handleWithCache(event));
 });
+
+async function handleWithCache(event) {
+  var request = event.request;
+  var url = new URL(request.url);
+  var isAuthenticated = hasAuthCookie(request);
+  var classification = classifyRequest(url.pathname);
+  var isHtmlRoute = classification.type !== 'api' && classification.type !== 'static';
+  var shouldCache = !isAuthenticated && request.method === 'GET' && isHtmlRoute;
+
+  if (shouldCache) {
+    var cache = caches.default;
+    var cached = await cache.match(request);
+    if (cached) {
+      var hitHeaders = new Headers(cached.headers);
+      hitHeaders.set('X-Worker-Cache', 'HIT');
+      return new Response(cached.body, { status: cached.status, headers: hitHeaders });
+    }
+  }
+
+  var response = await handleRequest(request);
+
+  if (shouldCache && response.status === 200) {
+    var cache = caches.default;
+    event.waitUntil(cache.put(request, response.clone()));
+  }
+
+  var finalHeaders = new Headers(response.headers);
+  finalHeaders.set('X-Worker-Cache', shouldCache ? 'MISS' : 'SKIP');
+  return new Response(response.body, { status: response.status, headers: finalHeaders });
+}
