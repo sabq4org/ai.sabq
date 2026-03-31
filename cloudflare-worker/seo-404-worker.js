@@ -16,6 +16,9 @@ var CACHE_TTL = 60;
 var EDGE_EXISTS_PATH = '/api/edge-exists';
 var NOT_FOUND_PATH = '/not-found';
 var NOT_FOUND_CACHE_TTL = 300;
+var HOMEPAGE_API_PATH = '/api/homepage-lite';
+var HOMEPAGE_CACHE_TTL = 60;
+var PRERENDER_ENABLED = true;
 
 var STATIC_EXTENSIONS = [
   '.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2',
@@ -212,9 +215,77 @@ function getFallback404Html() {
 '</html>';
 }
 
+/**
+ * Pre-render: inject homepage API data into HTML so the SPA can hydrate immediately
+ * without waiting for a separate API round-trip. Cached at edge for HOMEPAGE_CACHE_TTL.
+ */
+async function prerenderHomepage(request, origin) {
+  var cache = caches.default;
+  var cacheKey = new Request('https://cache-key/prerender-homepage');
+
+  var cached = await cache.match(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    var results = await Promise.all([
+      fetch(request),
+      fetch(origin + HOMEPAGE_API_PATH, {
+        method: 'GET',
+        headers: { 'User-Agent': 'Cloudflare-Worker/1.0', 'Accept': 'application/json' }
+      })
+    ]);
+
+    var htmlResponse = results[0];
+    var apiResponse = results[1];
+
+    if (!htmlResponse.ok) return htmlResponse;
+
+    var html = await htmlResponse.text();
+    var apiData = apiResponse.ok ? await apiResponse.text() : 'null';
+
+    var injection = '<script>window.__HOMEPAGE_DATA__=' + apiData + ';</script>';
+    html = html.replace('</head>', injection + '</head>');
+
+    var response = new Response(html, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, s-maxage=' + HOMEPAGE_CACHE_TTL + ', stale-while-revalidate=120',
+        'X-Prerendered': 'true'
+      }
+    });
+
+    var cacheResponse = new Response(html, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=' + HOMEPAGE_CACHE_TTL
+      }
+    });
+    await cache.put(cacheKey, cacheResponse);
+
+    return response;
+  } catch (error) {
+    console.error('[Prerender] Error:', error);
+    return fetch(request);
+  }
+}
+
+function hasAuthCookie(request) {
+  var cookieHeader = request.headers.get('Cookie') || '';
+  return cookieHeader.indexOf('connect.sid') !== -1 || cookieHeader.indexOf('session') !== -1;
+}
+
 async function handleRequest(request) {
   var url = new URL(request.url);
   var pathname = url.pathname;
+
+  // Pre-render homepage for unauthenticated visitors
+  if (PRERENDER_ENABLED && pathname === '/' && !hasAuthCookie(request) && request.method === 'GET') {
+    return prerenderHomepage(request, url.origin);
+  }
   
   var classification = classifyRequest(pathname);
   

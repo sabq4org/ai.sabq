@@ -42,7 +42,7 @@ export default function AnalyticsChart() {
         show: false
       },
       background: 'transparent',
-      fontFamily: 'Tajawal, sans-serif'
+      fontFamily: 'IBM Plex Sans Arabic, sans-serif'
     },
     dataLabels: {
       enabled: false

@@ -168,26 +168,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>سبق الذكية - منصة الأخبار الذكية</title>
-    <!-- Preconnect for critical resources (fonts and storage) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Preconnect for critical resources -->
     <link rel="preconnect" href="https://imagedelivery.net" crossorigin>
     
-    <!-- Load fonts with display=swap for faster text rendering (deferred to avoid render-blocking) -->
-    <link id="google-fonts" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print">
-    <script data-cfasync="false">
-      // Switch font stylesheet to 'all' after load (CSP-compliant replacement for inline onload)
-      (function() {
-        var link = document.getElementById('google-fonts');
-        if (link) {
-          if (link.sheet) { link.media = 'all'; }
-          else { link.addEventListener('load', function() { link.media = 'all'; }); }
-        }
-      })();
-    </script>
-    <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    </noscript>
+    <!-- DNS prefetch for third-party domains (loaded later on interaction) -->
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+    <link rel="dns-prefetch" href="https://securepubads.g.doubleclick.net">
+    <link rel="dns-prefetch" href="https://www.google-analytics.com">
+    <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com">
+    
+    <!-- Fonts: self-hosted IBM Plex Sans Arabic (loaded via CSS in fonts.css) -->
+    <!-- Eliminates 2 external requests to fonts.googleapis.com + fonts.gstatic.com -->
   </head>
   <body>
     <!-- Google Tag Manager (noscript) -->

@@ -275,18 +275,17 @@ app.use(
   })
 );
 
-// Enable Gzip compression for all responses
+// Gzip compression (Brotli handled by Cloudflare CDN layer)
 app.use(compression({
   filter: (req, res) => {
-    // Don't compress if the request includes a Cache-Control: no-transform directive
     if (req.headers['cache-control']?.includes('no-transform')) {
       return false;
     }
-    // Compress everything else
     return compression.filter(req, res);
   },
-  level: 6, // Compression level (0-9, default is 6)
-  threshold: 1024, // Only compress responses larger than 1KB
+  level: 6,
+  threshold: 512,
+  memLevel: 8,
 }));
 
 app.use((req: any, res: any, next: any) => {
@@ -312,7 +311,14 @@ console.log(`[Server] ✅ Static uploads directory configured: ${uploadsRootDir}
 // Serve static files from public directory (for branding, logos, etc.)
 const publicDir = path.join(process.cwd(), 'public');
 app.use('/branding', express.static(path.join(publicDir, 'branding')));
-console.log(`[Server] ✅ Static branding directory configured: ${publicDir}/branding`);
+app.use('/fonts', express.static(path.join(publicDir, 'fonts'), {
+  maxAge: '365d',
+  immutable: true,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
+  },
+}));
+console.log(`[Server] ✅ Static branding & fonts directories configured`);
 
 // Rate limiting configurations - use Cloudflare's real IP header
 const generalApiLimiter = rateLimit({
@@ -388,14 +394,12 @@ app.use((req, res, next) => {
   else if (/\.(jpg|jpeg|png|gif|svg|webp|avif|ico|woff|woff2|ttf|eot)$/i.test(path)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400');
   }
-  // HTML files - NEVER cache to prevent stale chunk references
-  // This is critical for SPA deployments where JS chunks have content hashes
+  // HTML files — edge-cacheable for unauthenticated, browser never caches.
+  // The writeHead override in the HTML caching middleware below handles
+  // the final Cache-Control based on authentication state.
   else if (path.endsWith('.html') || path === '/') {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store'); // CDN-specific (Cloudflare)
-    res.setHeader('CDN-Cache-Control', 'no-store'); // Alternative CDN header
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=60');
+    res.setHeader('Vary', 'Accept-Encoding, Cookie');
   }
   // API routes - cache is now controlled per-endpoint in routes.ts via cacheControl middleware
   // No default cache headers set here to allow individual routes to opt-in
@@ -774,11 +778,11 @@ async function startServerListening(): Promise<void> {
       console.log("[Server] ✅ Static asset 404 guard registered");
     }
     
-    // Middleware to set public caching headers for HTML pages
-    // This overrides express-session's "no-store, private" for public pages
-    // s-maxage allows Cloudflare edge caching, max-age=0 forces browser revalidation
+    // HTML caching middleware — allows Cloudflare edge caching for unauthenticated visitors
+    // while keeping no-cache for authenticated users (dashboard, etc.)
+    // Browser never caches HTML (max-age=0) to prevent stale chunk references after deploys.
+    // Edge (s-maxage) caches for 30s with 60s stale-while-revalidate for cold start resilience.
     app.use((req: Request, res: Response, next: NextFunction) => {
-      // Only apply to HTML page requests (not API, assets, etc.)
       const acceptHeader = req.headers.accept || '';
       const isHtmlRequest = acceptHeader.includes('text/html') && 
                             !req.path.startsWith('/api/') && 
@@ -786,27 +790,39 @@ async function startServerListening(): Promise<void> {
                             !req.path.includes('.');
       
       if (isHtmlRequest) {
-        // Override writeHead to set our cache headers last
         const originalWriteHead = res.writeHead.bind(res);
         res.writeHead = function(statusCode: number, ...args: any[]) {
           res.removeHeader('Cache-Control');
           res.removeHeader('cache-control');
           res.removeHeader('CDN-Cache-Control');
-          // HTML must NEVER be cached by CDN or browser.
-          // After every deploy, Vite renames JS chunks (content hash).
-          // If old HTML is cached, browser requests old chunks → 404 → chunk mismatch crash.
-          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-          res.setHeader('CDN-Cache-Control', 'no-store');
-          res.setHeader('Surrogate-Control', 'no-store');
-          res.setHeader('Pragma', 'no-cache');
-          res.setHeader('Expires', '0');
-          res.setHeader('Vary', 'Accept-Encoding');
+          res.removeHeader('Surrogate-Control');
+
+          const isAuthenticated = !!(req as any).user || !!(req as any).session?.passport?.user;
+
+          if (isAuthenticated) {
+            // Authenticated users: never cache (user-specific data, dashboard pages)
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+            res.setHeader('CDN-Cache-Control', 'no-store');
+            res.setHeader('Surrogate-Control', 'no-store');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+          } else {
+            // Unauthenticated visitors: allow Cloudflare edge cache (s-maxage)
+            // Browser always revalidates (max-age=0), edge serves cached for 30s,
+            // stale-while-revalidate=60 lets Cloudflare serve stale while refreshing in background
+            res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=60');
+            // Strip Set-Cookie so Cloudflare can cache the response
+            res.removeHeader('Set-Cookie');
+            res.removeHeader('set-cookie');
+          }
+
+          res.setHeader('Vary', 'Accept-Encoding, Cookie');
           return originalWriteHead(statusCode, ...args);
         } as typeof res.writeHead;
       }
       next();
     });
-    console.log("[Server] ✅ Public HTML cache headers middleware registered");
+    console.log("[Server] ✅ HTML cache headers middleware registered (edge-optimized)");
     
     if (!isProductionMode && app.get("env") === "development") {
       console.log("[Server] Starting in DEVELOPMENT mode with Vite");
