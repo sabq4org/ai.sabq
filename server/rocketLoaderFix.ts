@@ -36,7 +36,7 @@ export function serveStaticWithRocketLoaderFix(app: Express) {
     }
   }));
 
-  app.use("*", (_req: Request, res: Response, _next: NextFunction) => {
+  app.use("*", (req: Request, res: Response, _next: NextFunction) => {
     const indexPath = path.resolve(distPath, "index.html");
     
     try {
@@ -46,13 +46,11 @@ export function serveStaticWithRocketLoaderFix(app: Express) {
       if (!cachedHtml || currentMtime !== htmlMtime) {
         let html = fs.readFileSync(indexPath, "utf-8");
         
-        // Add data-cfasync="false" to ALL script tags that don't have it
         html = html.replace(
           /<script(?![^>]*data-cfasync)([^>]*)(type="module")/g,
           '<script data-cfasync="false"$1$2'
         );
         
-        // Also add to scripts without type attribute
         html = html.replace(
           /<script(?![^>]*data-cfasync)(?![^>]*type=)/g,
           '<script data-cfasync="false"'
@@ -63,18 +61,33 @@ export function serveStaticWithRocketLoaderFix(app: Express) {
         console.log("[RocketLoaderFix] HTML patched with data-cfasync attributes");
       }
       
-      // HTML must NEVER be cached — chunk filenames change on every deploy.
-      // All CDN/browser cache directives are set to prevent any caching.
-      res.status(200).set({
+      const isAuthenticated = !!(req as any).user || !!(req as any).session?.passport?.user;
+
+      const headers: Record<string, string> = {
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-        "CDN-Cache-Control": "no-store",
-        "Cloudflare-CDN-Cache-Control": "no-store",
-        "Surrogate-Control": "no-store",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "cf-cache-status": "BYPASS",
-      }).end(cachedHtml);
+        "Vary": "Accept-Encoding, Cookie",
+      };
+
+      if (isAuthenticated) {
+        headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+        headers["CDN-Cache-Control"] = "no-store";
+        headers["Surrogate-Control"] = "no-store";
+        headers["Pragma"] = "no-cache";
+        headers["Expires"] = "0";
+      } else {
+        // Browser never caches (max-age=0) — prevents stale chunks after deploys.
+        // Cloudflare edge caches for 60s, serves stale for 120s while revalidating.
+        headers["Cache-Control"] = "public, max-age=0, s-maxage=60, stale-while-revalidate=120";
+      }
+
+      res.status(200).set(headers);
+
+      if (!isAuthenticated) {
+        res.removeHeader('Set-Cookie');
+        res.removeHeader('set-cookie');
+      }
+
+      res.end(cachedHtml);
     } catch (error) {
       console.error("[RocketLoaderFix] Error:", error);
       res.status(500).send("Error loading page");

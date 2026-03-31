@@ -278,19 +278,58 @@ function hasAuthCookie(request) {
   return cookieHeader.indexOf('connect.sid') !== -1 || cookieHeader.indexOf('session') !== -1;
 }
 
+/**
+ * Strip Google Cloud Run's GAESA session-affinity cookie from origin responses.
+ * GAESA prevents Cloudflare from caching because Set-Cookie = uncacheable.
+ * Also remove no-store directives for unauthenticated HTML so Cloudflare can cache.
+ */
+function stripGaesaAndFixHeaders(response, isAuthenticated) {
+  var setCookie = response.headers.get('set-cookie') || '';
+  var needsStrip = setCookie.indexOf('GAESA') !== -1;
+  var cacheControl = response.headers.get('cache-control') || '';
+  var isHtml = (response.headers.get('content-type') || '').indexOf('text/html') !== -1;
+  var needsFixCache = !isAuthenticated && isHtml && cacheControl.indexOf('no-store') !== -1;
+
+  if (!needsStrip && !needsFixCache) {
+    return response;
+  }
+
+  var newHeaders = new Headers(response.headers);
+
+  if (needsStrip && !isAuthenticated) {
+    newHeaders.delete('set-cookie');
+  }
+
+  if (needsFixCache) {
+    newHeaders.set('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=120');
+    newHeaders.delete('CDN-Cache-Control');
+    newHeaders.delete('Cloudflare-CDN-Cache-Control');
+    newHeaders.delete('Surrogate-Control');
+    newHeaders.delete('Pragma');
+    newHeaders.delete('Expires');
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders
+  });
+}
+
 async function handleRequest(request) {
   var url = new URL(request.url);
   var pathname = url.pathname;
+  var isAuthenticated = hasAuthCookie(request);
 
-  // Pre-render homepage for unauthenticated visitors
-  if (PRERENDER_ENABLED && pathname === '/' && !hasAuthCookie(request) && request.method === 'GET') {
+  if (PRERENDER_ENABLED && pathname === '/' && !isAuthenticated && request.method === 'GET') {
     return prerenderHomepage(request, url.origin);
   }
   
   var classification = classifyRequest(pathname);
   
   if (!classification.shouldCheck) {
-    return fetch(request);
+    var response = await fetch(request);
+    return stripGaesaAndFixHeaders(response, isAuthenticated);
   }
 
   var existence = await checkExistence(url.origin, pathname);
@@ -310,7 +349,8 @@ async function handleRequest(request) {
     });
   }
 
-  return fetch(request);
+  var originResponse = await fetch(request);
+  return stripGaesaAndFixHeaders(originResponse, isAuthenticated);
 }
 
 addEventListener('fetch', function(event) {

@@ -778,51 +778,9 @@ async function startServerListening(): Promise<void> {
       console.log("[Server] ✅ Static asset 404 guard registered");
     }
     
-    // HTML caching middleware — allows Cloudflare edge caching for unauthenticated visitors
-    // while keeping no-cache for authenticated users (dashboard, etc.)
-    // Browser never caches HTML (max-age=0) to prevent stale chunk references after deploys.
-    // Edge (s-maxage) caches for 30s with 60s stale-while-revalidate for cold start resilience.
-    app.use((req: Request, res: Response, next: NextFunction) => {
-      const acceptHeader = req.headers.accept || '';
-      const isHtmlRequest = acceptHeader.includes('text/html') && 
-                            !req.path.startsWith('/api/') && 
-                            !req.path.startsWith('/uploads/') &&
-                            !req.path.includes('.');
-      
-      if (isHtmlRequest) {
-        const originalWriteHead = res.writeHead.bind(res);
-        res.writeHead = function(statusCode: number, ...args: any[]) {
-          res.removeHeader('Cache-Control');
-          res.removeHeader('cache-control');
-          res.removeHeader('CDN-Cache-Control');
-          res.removeHeader('Surrogate-Control');
-
-          const isAuthenticated = !!(req as any).user || !!(req as any).session?.passport?.user;
-
-          if (isAuthenticated) {
-            // Authenticated users: never cache (user-specific data, dashboard pages)
-            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-            res.setHeader('CDN-Cache-Control', 'no-store');
-            res.setHeader('Surrogate-Control', 'no-store');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
-          } else {
-            // Unauthenticated visitors: allow Cloudflare edge cache (s-maxage)
-            // Browser always revalidates (max-age=0), edge serves cached for 30s,
-            // stale-while-revalidate=60 lets Cloudflare serve stale while refreshing in background
-            res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=60');
-            // Strip Set-Cookie so Cloudflare can cache the response
-            res.removeHeader('Set-Cookie');
-            res.removeHeader('set-cookie');
-          }
-
-          res.setHeader('Vary', 'Accept-Encoding, Cookie');
-          return originalWriteHead(statusCode, ...args);
-        } as typeof res.writeHead;
-      }
-      next();
-    });
-    console.log("[Server] ✅ HTML cache headers middleware registered (edge-optimized)");
+    // HTML caching is now handled directly in rocketLoaderFix.ts (production)
+    // and vite.ts (development) — no writeHead interception needed.
+    console.log("[Server] ✅ HTML cache headers handled by serve layer");
     
     if (!isProductionMode && app.get("env") === "development") {
       console.log("[Server] Starting in DEVELOPMENT mode with Vite");
