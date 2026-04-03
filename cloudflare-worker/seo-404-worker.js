@@ -287,7 +287,7 @@ function stripGaesaAndFixHeaders(response, isAuthenticated) {
   var cacheControl = response.headers.get('cache-control') || '';
   var isHtml = (response.headers.get('content-type') || '').indexOf('text/html') !== -1;
   var hasSMaxAge = cacheControl.indexOf('s-maxage') !== -1;
-  var hasBadDirective = cacheControl.indexOf('no-store') !== -1 || cacheControl.indexOf('no-cache') !== -1;
+  var hasBadDirective = cacheControl.indexOf('no-store') !== -1 || cacheControl.indexOf('no-cache') !== -1 || cacheControl.indexOf('private') !== -1;
   var needsFixCache = !isAuthenticated && isHtml && hasSMaxAge && hasBadDirective;
 
   if (!needsStrip && !needsFixCache) {
@@ -327,7 +327,8 @@ async function handleRequest(request) {
   
   var classification = classifyRequest(pathname);
   
-  var cfCacheOptions = isAuthenticated ? {} : { cf: { cacheEverything: true } };
+  var isHtmlRoute = classification.type !== 'api' && classification.type !== 'static';
+  var cfCacheOptions = (!isAuthenticated && isHtmlRoute) ? { cf: { cacheEverything: true } } : {};
 
   if (!classification.shouldCheck) {
     var response = await fetch(request, cfCacheOptions);
@@ -369,7 +370,8 @@ async function handleWithCache(event) {
 
   if (shouldCache) {
     var cache = caches.default;
-    var cached = await cache.match(request);
+    var cacheKey = new Request('https://cache-key/html' + url.pathname);
+    var cached = await cache.match(cacheKey);
     if (cached) {
       var hitHeaders = new Headers(cached.headers);
       hitHeaders.set('X-Worker-Cache', 'HIT');
@@ -381,7 +383,22 @@ async function handleWithCache(event) {
 
   if (shouldCache && response.status === 200) {
     var cache = caches.default;
-    event.waitUntil(cache.put(request, response.clone()));
+    var cacheKey = new Request('https://cache-key/html' + url.pathname);
+    var body = await response.text();
+    var smatch = (response.headers.get('Cache-Control') || '').match(/s-maxage=(\d+)/);
+    var ttl = smatch ? smatch[1] : '60';
+    var cacheResp = new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=' + ttl
+      }
+    });
+    event.waitUntil(cache.put(cacheKey, cacheResp));
+
+    var finalHeaders = new Headers(response.headers);
+    finalHeaders.set('X-Worker-Cache', 'MISS');
+    return new Response(body, { status: 200, headers: finalHeaders });
   }
 
   var finalHeaders = new Headers(response.headers);

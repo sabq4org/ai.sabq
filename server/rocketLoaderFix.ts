@@ -80,12 +80,26 @@ export function serveStaticWithRocketLoaderFix(app: Express) {
         headers["Cache-Control"] = "public, max-age=0, s-maxage=60, stale-while-revalidate=120";
       }
 
+      res.removeHeader('Cache-Control');
+      res.removeHeader('Pragma');
+      res.removeHeader('Expires');
       res.status(200).set(headers);
 
       if (!isAuthenticated) {
         res.removeHeader('Set-Cookie');
         res.removeHeader('set-cookie');
       }
+
+      const originalEnd = res.end.bind(res);
+      res.end = function(...args: any[]) {
+        if (!isAuthenticated) {
+          const cc = res.getHeader('Cache-Control');
+          if (typeof cc === 'string' && cc.includes('private')) {
+            res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=120');
+          }
+        }
+        return originalEnd(...args);
+      } as typeof res.end;
 
       res.end(cachedHtml);
     } catch (error) {
