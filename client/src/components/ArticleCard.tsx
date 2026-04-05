@@ -95,7 +95,8 @@ export function ArticleCard({
   if (variant === "featured") {
     return (
       <Link href={`/article/${article.englishSlug || article.slug}`} data-testid={`link-article-${article.id}`}>
-        <Card className="group overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 !border-0 !bg-transparent">
+        {/* DESIGN.md hero card: full-bg image, gradient from transparent to rgba(0,0,0,0.85), white title, no shadows */}
+        <Card className="group overflow-hidden rounded-[4px] !border-0 !bg-transparent transition-all duration-300 hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]">
           <div className="relative aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9] overflow-hidden">
             {displayImageUrl ? (
               <OptimizedImage
@@ -110,7 +111,8 @@ export function ArticleCard({
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary/20 via-accent/20 to-primary/10" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+            {/* DESIGN.md hero gradient: transparent → rgba(0,0,0,0.85) */}
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 50%, transparent 100%)' }} />
             
             <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex flex-wrap gap-2">
               {isNew && (
@@ -190,10 +192,19 @@ export function ArticleCard({
             )}
 
             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 text-white">
-              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2 sm:mb-3 leading-tight" data-testid={`text-title-${article.id}`}>
+              {/* DESIGN.md: thin red line separates category from title in hero */}
+              {article.category && (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="h-0.5 w-6 flex-shrink-0" style={{ backgroundColor: '#C0392B' }} />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-white/90">
+                    {article.category.nameAr}
+                  </span>
+                </div>
+              )}
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2 sm:mb-3 leading-tight font-sabq-ui" data-testid={`text-title-${article.id}`}>
                 {article.title}
               </h2>
-              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-white/80 flex-wrap">
+              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-white/70 flex-wrap">
                 {article.author && (
                   <span className="font-medium">
                     {article.author.firstName} {article.author.lastName}
@@ -216,7 +227,7 @@ export function ArticleCard({
   if (variant === "compact") {
     return (
       <Link href={`/article/${article.englishSlug || article.slug}`} data-testid={`link-article-${article.id}`}>
-        <Card className="group overflow-hidden rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md transition-all duration-300 !border-0 !bg-transparent">
+        <Card className="sabq-news-card group">
           <CardContent className="p-3">
             <div className="flex items-start gap-2 mb-2">
               {isNew && (
@@ -287,11 +298,11 @@ export function ArticleCard({
               )}
             </div>
             
-            <h3 className="text-sm font-semibold leading-relaxed line-clamp-2 group-hover:text-primary transition-colors mb-2" data-testid={`text-title-${article.id}`}>
+            <h3 className="text-sm font-bold leading-relaxed line-clamp-2 font-sabq-ui transition-colors group-hover:text-[#C0392B] mb-2" style={{ color: '#0D0D0D' }} data-testid={`text-title-${article.id}`}>
               {article.title}
             </h3>
 
-            <div className="flex items-center justify-between text-[10px] text-slate-500">
+            <div className="flex items-center justify-between text-[10px]" style={{ color: '#7A7A72' }}>
               {timeAgo && <span>{timeAgo}</span>}
             </div>
           </CardContent>
@@ -302,7 +313,7 @@ export function ArticleCard({
 
   if (variant === "list") {
     return (
-      <Card className="group rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md transition-all duration-300 !border-0 !bg-transparent">
+      <Card className="sabq-news-card group">
         <CardContent className="p-4">
           <div className="flex gap-4">
             <Link href={`/article/${article.englishSlug || article.slug}`} className="flex-shrink-0" data-testid={`link-article-${article.id}`}>
@@ -400,13 +411,13 @@ export function ArticleCard({
               </div>
 
               <Link href={`/article/${article.englishSlug || article.slug}`}>
-                <h3 className="text-[17px] font-semibold mb-2 line-clamp-2 leading-relaxed group-hover:text-primary transition-colors" data-testid={`text-title-${article.id}`}>
+                <h3 className="text-[17px] font-bold mb-2 line-clamp-2 leading-relaxed font-sabq-ui transition-colors group-hover:text-[#C0392B]" style={{ color: '#0D0D0D' }} data-testid={`text-title-${article.id}`}>
                   {article.title}
                 </h3>
               </Link>
 
               {article.aiSummary && (
-                <p className="text-sm text-[#475569] line-clamp-2 mb-3 leading-relaxed">
+                <p className="text-sm line-clamp-2 mb-3 leading-relaxed" style={{ color: '#7A7A72' }}>
                   {article.aiSummary}
                 </p>
               )}
@@ -421,7 +432,7 @@ export function ArticleCard({
               )}
 
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 text-xs text-slate-500">
+                <div className="flex items-center gap-3 text-xs" style={{ color: '#7A7A72' }}>
                   {timeAgo && <span>{timeAgo}</span>}
                 </div>
 
@@ -461,11 +472,14 @@ export function ArticleCard({
     );
   }
 
-  // Grid variant (default) - Professional News Card
+  // Grid variant (default) - Professional News Card (DESIGN.md)
   return (
-    <Card className="group overflow-hidden rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md transition-all duration-300 !border-0 !bg-transparent" data-testid={`card-article-${article.id}`}>
+    <Card className="sabq-news-card group" data-testid={`card-article-${article.id}`}>
       <CardContent className="p-0">
+        {/* DESIGN.md: 2px red category strip at top of card */}
+        <div className="sabq-category-strip" />
         <Link href={`/article/${article.englishSlug || article.slug}`} data-testid={`link-article-${article.id}`}>
+          {/* Image: sharp corners (no border-radius), 16:9 ratio */}
           <div className="relative aspect-[16/9] overflow-hidden">
             {displayImageUrl ? (
               <OptimizedImage
@@ -559,13 +573,14 @@ export function ArticleCard({
 
         <div className="p-4">
           <Link href={`/article/${article.englishSlug || article.slug}`}>
-            <h3 className="text-[17px] font-semibold mb-2 line-clamp-2 leading-relaxed text-[#0F172A] dark:text-foreground group-hover:text-primary transition-colors" data-testid={`text-title-${article.id}`}>
+            {/* DESIGN.md H3: Cairo 700, sabq-ink (#0D0D0D) */}
+            <h3 className="font-bold text-[17px] mb-2 line-clamp-2 leading-relaxed font-sabq-ui transition-colors group-hover:text-[#C0392B]" style={{ color: '#0D0D0D' }} data-testid={`text-title-${article.id}`}>
               {article.title}
             </h3>
           </Link>
 
         {article.aiSummary && (
-          <p className="text-sm text-[#475569] dark:text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
+          <p className="text-sm line-clamp-2 mb-3 leading-relaxed" style={{ color: '#7A7A72' }}>
             {article.aiSummary}
           </p>
         )}
@@ -580,18 +595,22 @@ export function ArticleCard({
         )}
 
         <div className="flex items-center justify-between pt-3">
-          <div className="flex items-center gap-2 text-xs">
+          {/* DESIGN.md meta: sabq-muted (#7A7A72), separator dot */}
+          <div className="flex items-center gap-2 text-xs" style={{ color: '#7A7A72' }}>
             {article.category && (
-              <Badge 
-                variant="outline" 
-                className="text-xs px-2 py-0.5 border-primary/30 text-primary font-medium"
+              <span
+                className="font-semibold text-[11px]"
+                style={{ color: '#C0392B' }}
                 data-testid={`badge-category-footer-${article.id}`}
               >
                 {article.category.nameAr}
-              </Badge>
+              </span>
+            )}
+            {article.category && timeAgo && (
+              <span className="text-[#D4D4CC]">·</span>
             )}
             {timeAgo && (
-              <span className="flex items-center gap-1 text-slate-500 dark:text-muted-foreground">
+              <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {timeAgo}
               </span>

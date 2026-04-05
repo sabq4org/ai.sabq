@@ -108,11 +108,27 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        // سبق Identity Colors — DESIGN.md
+        sabq: {
+          red:       '#C0392B',
+          'red-dark':'#A93226',
+          gold:      '#B8860B',
+          ink:       '#0D0D0D',
+          body:      '#1A1A2E',
+          white:     '#FFFFFF',
+          surface:   '#F8F8F6',
+          border:    '#D4D4CC',
+          muted:     '#7A7A72',
+          'gray-700':'#3D3D35',
+        },
       },
       fontFamily: {
-        sans: ['"IBM Plex Sans Arabic"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Cairo', '"IBM Plex Sans Arabic"', 'system-ui', '-apple-system', 'sans-serif'],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        'sabq-heading': ['"Playfair Display"', '"Noto Naskh Arabic"', 'serif'],
+        'sabq-ui': ['Cairo', 'sans-serif'],
+        'sabq-data': ['"IBM Plex Sans Arabic"', 'sans-serif'],
       },
       keyframes: {
         "accordion-down": {
