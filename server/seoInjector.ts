@@ -99,12 +99,19 @@ function injectSeoIntoHtml(html: string, seo: SeoData): string {
 
   const isArticlePage = seo.ogType === 'article' && !!seo.publishedTime;
 
+  // For articles older than 1 year: add noarchive to prevent Google Discovery from resurfacing them
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+  const isOldArticle = isArticlePage && seo.publishedTime && new Date(seo.publishedTime) < oneYearAgo;
+  const robotsContent = isOldArticle
+    ? 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1, noarchive'
+    : isArticlePage
+      ? 'index, follow, max-image-preview:large'
+      : 'index, follow';
+
   const metaTags = `
   <!-- SEO Injected Meta Tags -->
   <link rel="canonical" href="${safeCanonical}">
-  ${isArticlePage
-    ? `<meta name="robots" content="index, follow, max-image-preview:large">`
-    : `<meta name="robots" content="index, follow">`}
+  <meta name="robots" content="${robotsContent}">
   <meta property="og:type" content="${escapeHtml(seo.ogType)}">
   <meta property="og:url" content="${safeCanonical}">
   <meta property="og:title" content="${safeTitle}">

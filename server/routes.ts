@@ -30542,14 +30542,28 @@ ${currentTitle ? `العنوان الحالي: ${currentTitle}\n\n` : ''}
         xml += `  <url><loc>${baseUrl}${page}</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n`;
       }
 
-      // Articles
+      // Articles — use publishedAt as lastmod to prevent Google from treating archived content as new
+      const now30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);  // 30 days ago
+      const now7  = new Date(Date.now() -  7 * 24 * 60 * 60 * 1000);  // 7 days ago
       for (const article of publishedArticles) {
-        const lastmod = (article.updatedAt || article.publishedAt || new Date()).toISOString();
+        // Always use original publishedAt — never updatedAt (import date would mislead Google)
+        const lastmod = (article.publishedAt || new Date()).toISOString();
+        const pubDate = article.publishedAt ? new Date(article.publishedAt) : new Date();
+        // Priority & changefreq based on age
+        let priority: string;
+        let changefreq: string;
+        if (pubDate >= now7) {
+          priority = '0.9'; changefreq = 'hourly';
+        } else if (pubDate >= now30) {
+          priority = '0.7'; changefreq = 'daily';
+        } else {
+          priority = '0.3'; changefreq = 'yearly';
+        }
         xml += `  <url>\n`;
         xml += `    <loc>${baseUrl}/article/${encodeURIComponent(article.slug)}</loc>\n`;
         xml += `    <lastmod>${lastmod}</lastmod>\n`;
-        xml += `    <changefreq>weekly</changefreq>\n`;
-        xml += `    <priority>0.8</priority>\n`;
+        xml += `    <changefreq>${changefreq}</changefreq>\n`;
+        xml += `    <priority>${priority}</priority>\n`;
         xml += `  </url>\n`;
       }
 
@@ -30676,12 +30690,17 @@ Crawl-delay: 1
 
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Googlebot-News
 Allow: /
+# Google News should only process recent articles
+Disallow: /
+Allow: /article/
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 2
 `;
 
     res.header('Content-Type', 'text/plain; charset=utf-8');
