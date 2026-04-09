@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+/* ============================================
+   SABQ Design System Tokens
+   Based on DESIGN.md - Editorial Elegance
+   ============================================ */
+
+:root {
+  --sabq-red: #C0392B;
+  --sabq-red-dark: #A93226;
+  --sabq-gold: #B8860B;
+  --sabq-gold-dark: #9A6F0A;
+  --sabq-ink: #0D0D0D;
+  --sabq-body: #1A1A2E;
+  --sabq-white: #FFFFFF;
+  --sabq-surface: #F8F8F6;
+  --sabq-border: #D4D4CC;
+  --sabq-muted: #7A7A72;
+  --sabq-dark: #3D3D35;
+  --background: var(--sabq-white);
+  --foreground: var(--sabq-body);
+  --card-bg: var(--sabq-white);
+  --card-border: var(--sabq-border);
+  --sabq-radius: 4px;
+  --sabq-radius-sm: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0F0F0F;
+    --foreground: #F0EFE9;
+    --card-bg: #242424;
+    --card-border: #333333;
+    --sabq-surface: #1A1A1A;
+    --sabq-muted: #9A9A92;
+    --sabq-red: #E04040;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-sabq-red: var(--sabq-red);
+  --color-sabq-red-dark: var(--sabq-red-dark);
+  --color-sabq-gold: var(--sabq-gold);
+  --color-sabq-ink: var(--sabq-ink);
+  --color-sabq-body: var(--sabq-body);
+  --color-sabq-white: var(--sabq-white);
+  --color-sabq-surface: var(--sabq-surface);
+  --color-sabq-border: var(--sabq-border);
+  --color-sabq-muted: var(--sabq-muted);
+  --color-sabq-dark: var(--sabq-dark);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+}
+
+html {
+  direction: rtl;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+  text-align: right;
+  line-height: 1.8;
+  letter-spacing: 0;
+  word-spacing: 0.05em;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cairo', 'Noto Naskh Arabic', serif;
+  color: var(--sabq-ink);
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+h1 { font-size: clamp(1.75rem, 4vw, 2.625rem); font-weight: 800; }
+h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
+h3 { font-size: clamp(1.25rem, 2.5vw, 1.5rem); }
+h4 { font-size: clamp(1.125rem, 2vw, 1.25rem); font-weight: 600; }
+
+.article-content {
+  font-size: 1.125rem;
+  line-height: 2;
+  color: var(--sabq-body);
+}
+.article-content p { margin-bottom: 1.5rem; }
+.article-content h2 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--sabq-border);
+}
+.article-content img {
+  border-radius: var(--sabq-radius);
+  margin: 1.5rem 0;
+  max-width: 100%;
+  height: auto;
+}
+.article-content blockquote {
+  border-right: 4px solid var(--sabq-red);
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  background: var(--sabq-surface);
+  font-style: italic;
+}
+.article-content a {
+  color: var(--sabq-red);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.article-content a:hover { color: var(--sabq-red-dark); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.breaking-pulse {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+.ticker-animate {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--sabq-surface); }
+::-webkit-scrollbar-thumb { background: var(--sabq-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sabq-muted); }
+
+::selection {
+  background: var(--sabq-red);
+  color: white;
+}

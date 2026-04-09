@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سبق — نظام التصميم | Design System Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* =============================================
+       SABQ Design Tokens
+       ============================================= */
+    :root {
+      --sabq-red:      #C0392B;
+      --sabq-red-dark: #A93226;
+      --sabq-gold:     #B8860B;
+      --sabq-ink:      #0D0D0D;
+      --sabq-body:     #1A1A2E;
+      --sabq-white:    #FFFFFF;
+      --sabq-surface:  #F8F8F6;
+      --sabq-border:   #D4D4CC;
+      --sabq-muted:    #7A7A72;
+
+      --font-heading: 'Playfair Display', 'Noto Naskh Arabic', serif;
+      --font-ui: 'Cairo', sans-serif;
+    }
+
+    /* =============================================
+       RESET & BASE
+       ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      direction: rtl;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--sabq-white);
+      color: var(--sabq-body);
+      text-align: right;
+      line-height: 1.8;
+    }
+
+    /* =============================================
+       LAYOUT UTILITIES
+       ============================================= */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
+
+    .section {
+      padding: 48px 0;
+      border-bottom: 1px solid var(--sabq-border);
+    }
+
+    .section:last-child { border-bottom: none; }
+
+    .section-title {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--sabq-muted);
+      margin-bottom: 32px;
+      padding-bottom: 8px;
+      border-bottom: 3px solid var(--sabq-ink);
+      display: inline-block;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .flex-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+    /* =============================================
+       NAV BAR
+       ============================================= */
+    .sabq-header {
+      background: var(--sabq-ink);
+      border-bottom: 2px solid var(--sabq-red);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .sabq-header .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .sabq-logo {
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--sabq-white);
+      letter-spacing: -0.02em;
+    }
+
+    .sabq-logo span {
+      color: var(--sabq-red);
+    }
+
+    .sabq-nav-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .sabq-nav-links a {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+
+    .sabq-nav-links a:hover { color: var(--sabq-white); }
+    .sabq-nav-links a.active { color: var(--sabq-red); }
+
+    .sabq-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sabq-search-box {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      padding: 6px 12px;
+      gap: 8px;
+    }
+
+    .sabq-search-box input {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--sabq-white);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      width: 140px;
+      direction: rtl;
+    }
+
+    .sabq-search-box input::placeholder { color: rgba(255,255,255,0.4); }
+
+    .sabq-search-icon {
+      color: rgba(255,255,255,0.5);
+      font-size: 14px;
+    }
+
+    /* Category bar */
+    .sabq-categories {
+      background: var(--sabq-white);
+      border-bottom: 1px solid var(--sabq-border);
+      height: 44px;
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+    }
+
+    .sabq-categories .container {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .sabq-cat-link {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--sabq-body);
+      text-decoration: none;
+      padding: 0 16px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 150ms ease, border-color 150ms ease;
+    }
+
+    .sabq-cat-link:hover { color: var(--sabq-red); }
+    .sabq-cat-link.active {
+      color: var(--sabq-red);
+      border-bottom-color: var(--sabq-red);
+    }
+
+    /* =============================================
+       PREVIEW HEADER
+       ============================================= */
+    .preview-intro {
+      background: var(--sabq-surface);
+      padding: 40px 0;
+      border-bottom: 3px solid var(--sabq-ink);
+    }
+
+    .preview-intro h1 {
+      font-family: var(--font-heading);
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--sabq-ink);
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .preview-intro p {
+      font-size: 15px;
+      color: var(--sabq-muted);
+      font-weight: 400;
+    }
+
+    /* =============================================
+       COLOR SWATCHES
+       ============================================= */
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+    }
+
+    .swatch {
+      border: 1px solid var(--sabq-border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .swatch-color {
+      height: 80px;
+      width: 100%;
+    }
+
+    .swatch-info {
+      padding: 10px 12px;
+      background: var(--sabq-white);
+    }
+
+    .swatch-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sabq-ink);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .swatch-hex {
+      font-size: 11px;
+      color: var(--sabq-muted);
+      font-family: monospace;
+    }
+
+    .swatch-role {
+      font-size: 10px;
+      color: var(--sabq-muted);
+      margin-top: 2px;
+      display: block;
+      line-height: 1.4;
+    }
+
+    /* =============================================
+       TYPOGRAPHY SCALE
+       ============================================= */
+    .typo-row {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--sabq-border);
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+    }
+
+    .typo-row:last-child { border-bottom: none; }
+
+    .typo-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--sabq-muted);
+      min-width: 80px;
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+    }
+
+    .typo-display {
+      font-family: var(--font-heading);
+      font-size: 56px;
+      font-weight: 900;
+      color: var(--sabq-ink);
+      line-height: 1.1;
+    }
+
+    .typo-h1 {
+      font-family: var(--font-ui);
+      font-size: 38px;
+      font-weight: 800;
+      color: var(--sabq-ink);
+      line-height: 1.25;
+    }
+
+    .typo-h2 {
+      font-family: var(--font-ui);
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--sabq-ink);
+      line-height: 1.3;
+    }
+
+    .typo-h3 {
+      font-family: var(--font-ui);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--sabq-ink);
+      line-height: 1.4;
+    }
+
+    .typo-body {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--sabq-body);
+      line-height: 1.8;
+    }
+
+    .typo-caption {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--sabq-muted);
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       BUTTONS
+       ============================================= */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 24px;
+      border-radius: 4px;
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+
+    .btn-primary {
+      background: var(--sabq-red);
+      color: var(--sabq-white);
+    }
+
+    .btn-primary:hover { background: var(--sabq-red-dark); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--sabq-ink);
+      border: 1.5px solid var(--sabq-ink);
+    }
+
+    .btn-secondary:hover {
+      background: var(--sabq-ink);
+      color: var(--sabq-white);
+    }
+
+    .btn-gold {
+      background: var(--sabq-gold);
+      color: var(--sabq-white);
+    }
+
+    .btn-gold:hover { background: #9A6F0A; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--sabq-muted);
+      border: 1px solid var(--sabq-border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--sabq-muted);
+      color: var(--sabq-body);
+    }
+
+    /* =============================================
+       NEWS CARDS
+       ============================================= */
+    .news-card {
+      background: var(--sabq-white);
+      border: 1px solid var(--sabq-border);
+      border-radius: 4px;
+      overflow: hidden;
+      transition: border-color 200ms ease, box-shadow 200ms ease;
+    }
+
+    .news-card:hover {
+      border-color: var(--sabq-muted);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .news-card-img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      display: block;
+      background: var(--sabq-surface);
+      position: relative;
+    }
+
+    .news-card-img-placeholder {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #E8E8E4 0%, #D4D4CC 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: var(--sabq-muted);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .news-card-img-placeholder::after {
+      content: '📷';
+      font-size: 28px;
+    }
+
+    .news-card-category-bar {
+      height: 2px;
+      background: var(--sabq-red);
+    }
+
+    .news-card-body {
+      padding: 16px;
+    }
+
+    .news-card-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--sabq-red);
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .news-card-title {
+      font-family: var(--font-ui);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--sabq-ink);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .news-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--sabq-muted);
+      font-weight: 400;
+    }
+
+    .meta-dot {
+      color: var(--sabq-border);
+    }
+
+    /* Breaking News Card */
+    .breaking-card {
+      background: #FEF9F9;
+      border: 1px solid var(--sabq-border);
+      border-right: 4px solid var(--sabq-red);
+      border-radius: 4px;
+      padding: 20px;
+      transition: border-color 200ms ease;
+    }
+
+    .breaking-card:hover {
+      border-color: var(--sabq-red);
+      box-shadow: 0 2px 8px rgba(192,57,43,0.08);
+    }
+
+    .breaking-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--sabq-red);
+      color: var(--sabq-white);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 2px;
+      margin-bottom: 12px;
+      letter-spacing: 0.06em;
+    }
+
+    .breaking-pulse {
+      width: 7px;
+      height: 7px;
+      background: var(--sabq-white);
+      border-radius: 50%;
+      display: inline-block;
+      animation: breaking-pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes breaking-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .breaking-title {
+      font-family: var(--font-ui);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--sabq-ink);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .breaking-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--sabq-muted);
+    }
+
+    /* Hero Card */
+    .hero-card {
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      min-height: 360px;
+      background: var(--sabq-ink);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .hero-card-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #2C2C2C 0%, #1A1A1A 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      opacity: 0.3;
+    }
+
+    .hero-card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%);
+    }
+
+    .hero-card-content {
+      position: relative;
+      z-index: 2;
+      padding: 24px;
+    }
+
+    .hero-card-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--sabq-white);
+      background: var(--sabq-red);
+      padding: 3px 10px;
+      border-radius: 2px;
+      margin-bottom: 10px;
+      letter-spacing: 0.06em;
+    }
+
+    .hero-divider {
+      width: 40px;
+      height: 2px;
+      background: var(--sabq-red);
+      margin-bottom: 10px;
+    }
+
+    .hero-card-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--sabq-white);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .hero-card-meta {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* =============================================
+       BADGES
+       ============================================= */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-breaking { background: var(--sabq-red); color: var(--sabq-white); }
+    .badge-published { background: #1E7D4F; color: var(--sabq-white); }
+    .badge-draft { background: var(--sabq-muted); color: var(--sabq-white); }
+    .badge-pending { background: var(--sabq-gold); color: var(--sabq-white); }
+    .badge-exclusive {
+      background: var(--sabq-gold);
+      color: var(--sabq-ink);
+      font-weight: 800;
+    }
+
+    /* =============================================
+       SECTION DIVIDERS (Editorial)
+       ============================================= */
+    .editorial-section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .editorial-section-title {
+      font-family: var(--font-ui);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--sabq-ink);
+      padding-top: 10px;
+      border-top: 3px solid var(--sabq-ink);
+    }
+
+    .editorial-section-title.red-accent {
+      border-top-color: var(--sabq-red);
+      color: var(--sabq-red);
+    }
+
+    /* =============================================
+       FORM INPUTS
+       ============================================= */
+    .sabq-input {
+      width: 100%;
+      border: 1px solid var(--sabq-border);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-family: var(--font-ui);
+      font-size: 16px;
+      color: var(--sabq-ink);
+      background: var(--sabq-white);
+      direction: rtl;
+      outline: none;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .sabq-input:focus {
+      border-color: var(--sabq-ink);
+      box-shadow: 0 0 0 3px rgba(13,13,13,0.08);
+    }
+
+    .sabq-input::placeholder { color: var(--sabq-muted); }
+
+    /* =============================================
+       DARK STRIP CALLOUT
+       ============================================= */
+    .breaking-ticker {
+      background: var(--sabq-red);
+      color: var(--sabq-white);
+      padding: 10px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .breaking-ticker-inner {
+      display: inline-flex;
+      gap: 48px;
+      animation: ticker-rtl 20s linear infinite;
+    }
+
+    @keyframes ticker-rtl {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(50%); }
+    }
+
+    .ticker-label {
+      background: var(--sabq-ink);
+      color: var(--sabq-white);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 2px;
+      margin-left: 16px;
+      letter-spacing: 0.08em;
+    }
+
+    .ticker-item {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* =============================================
+       FOOTER BAR
+       ============================================= */
+    .sabq-footer {
+      background: var(--sabq-ink);
+      color: rgba(255,255,255,0.6);
+      padding: 32px 0;
+      margin-top: 64px;
+      font-size: 13px;
+    }
+
+    .sabq-footer .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sabq-footer-logo {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      color: var(--sabq-white);
+      font-weight: 900;
+    }
+
+    /* =============================================
+       RESPONSIVE
+       ============================================= */
+    @media (max-width: 900px) {
+      .container { padding: 0 24px; }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+      .grid-4 { grid-template-columns: repeat(3, 1fr); }
+      .typo-display { font-size: 36px; }
+      .typo-h1 { font-size: 28px; }
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 0 16px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .sabq-nav-links { display: none; }
+      .preview-intro h1 { font-size: 28px; }
+    }
+
+    /* =============================================
+       UTILITY
+       ============================================= */
+    .text-muted { color: var(--sabq-muted); font-size: 13px; }
+    .mt-8 { margin-top: 8px; }
+    .mt-16 { margin-top: 16px; }
+    .mt-24 { margin-top: 24px; }
+    .mt-32 { margin-top: 32px; }
+    .mb-8 { margin-bottom: 8px; }
+    .mb-16 { margin-bottom: 16px; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================
+       NAVIGATION — DEMO
+       ============================================ -->
+  <header class="sabq-header" role="banner">
+    <div class="container">
+      <div class="sabq-logo">سبق<span>.</span></div>
+      <nav aria-label="القائمة الرئيسية">
+        <ul class="sabq-nav-links">
+          <li><a href="#" class="active">الرئيسية</a></li>
+          <li><a href="#">محلي</a></li>
+          <li><a href="#">رياضة</a></li>
+          <li><a href="#">اقتصاد</a></li>
+          <li><a href="#">دولي</a></li>
+          <li><a href="#">تقنية</a></li>
+        </ul>
+      </nav>
+      <div class="sabq-header-actions">
+        <div class="sabq-search-box">
+          <input type="text" placeholder="ابحث في سبق…" aria-label="بحث">
+          <span class="sabq-search-icon">🔍</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sabq-categories" aria-label="تصنيفات الأخبار">
+    <div class="container">
+      <a href="#" class="sabq-cat-link active">عاجل</a>
+      <a href="#" class="sabq-cat-link">السعودية</a>
+      <a href="#" class="sabq-cat-link">الخليج</a>
+      <a href="#" class="sabq-cat-link">العالم</a>
+      <a href="#" class="sabq-cat-link">الرياضة</a>
+      <a href="#" class="sabq-cat-link">الاقتصاد</a>
+      <a href="#" class="sabq-cat-link">التقنية</a>
+      <a href="#" class="sabq-cat-link">المجتمع</a>
+    </div>
+  </nav>
+
+  <!-- Breaking Ticker -->
+  <div class="breaking-ticker" aria-live="polite">
+    <span class="ticker-label">⚡ عاجل</span>
+    <span class="breaking-ticker-inner">
+      <span class="ticker-item">مجلس الوزراء يعقد جلسته الأسبوعية برئاسة ولي العهد الأمير محمد بن سلمان</span>
+      <span class="ticker-item">•</span>
+      <span class="ticker-item">الاحتياطي الفيدرالي الأمريكي يُقرر تثبيت أسعار الفائدة للمرة الثالثة على التوالي</span>
+      <span class="ticker-item">•</span>
+      <span class="ticker-item">الأهلي يتأهل لنهائي دوري أبطال آسيا بعد فوزه على الاتحاد بثلاثية نظيفة</span>
+    </span>
+  </div>
+
+  <!-- ============================================
+       PREVIEW INTRO
+       ============================================ -->
+  <div class="preview-intro">
+    <div class="container">
+      <h1>نظام التصميم — سبق الإلكترونية</h1>
+      <p>مرجع بصري تفاعلي لنظام هوية سبق الجديد · Design System Preview · افتح مباشرة في المتصفح دون Servers</p>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- ============================================
+         1. COLOR PALETTE
+         ============================================ -->
+    <section class="section">
+      <div class="container">
+        <div class="section-title">🎨 الألوان — Color Palette</div>
+        <div class="swatches">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#C0392B;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Sabq Red</span>
+              <span class="swatch-hex">#C0392B</span>
+              <span class="swatch-role">Accent رئيسي · عاجل · CTA</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#A93226;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Red Dark</span>
+              <span class="swatch-hex">#A93226</span>
+              <span class="swatch-role">Hover state للأحمر</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#B8860B;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Sabq Gold</span>
+              <span class="swatch-hex">#B8860B</span>
+              <span class="swatch-role">Premium · حصري · مميز</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#0D0D0D;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Sabq Ink</span>
+              <span class="swatch-hex">#0D0D0D</span>
+              <span class="swatch-role">عناوين · Header BG</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#1A1A2E;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Sabq Body</span>
+              <span class="swatch-hex">#1A1A2E</span>
+              <span class="swatch-role">نص المحتوى الرئيسي</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#FFFFFF; border:1px solid #D4D4CC;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Sabq White</span>
+              <span class="swatch-hex">#FFFFFF</span>
+              <span class="swatch-role">خلفية رئيسية</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#F8F8F6;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Surface</span>
+              <span class="swatch-hex">#F8F8F6</span>
+              <span class="swatch-role">خلفية الكاردز والأقسام</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#D4D4CC;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Border</span>
+              <span class="swatch-hex">#D4D4CC</span>
+              <span class="swatch-role">الحدود والفواصل</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#7A7A72;"></div>
+            <div class="swatch-info">
+              <span class="swatch-name">Muted</span>
+              <span class="swatch-hex">#7A7A72</span>
+              <span class="swatch-role">نص ثانوي · تواريخ · meta</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-32" style="border-top: 1px solid var(--sabq-border); padding-top: 24px;">
+          <div class="section-title" style="font-size:11px; margin-bottom:16px;">ألوان الحالات — Status Colors</div>
+          <div class="flex-row">
+            <div class="flex-row gap-8">
+              <span class="badge badge-breaking">⚡ عاجل</span>
+              <span style="font-size:11px; color:var(--sabq-muted);">#C0392B</span>
+            </div>
+            <div class="flex-row gap-8">
+              <span class="badge badge-published">✓ منشور</span>
+              <span style="font-size:11px; color:var(--sabq-muted);">#1E7D4F</span>
+            </div>
+            <div class="flex-row gap-8">
+              <span class="badge badge-draft">مسودة</span>
+              <span style="font-size:11px; color:var(--sabq-muted);">#7A7A72</span>
+            </div>
+            <div class="flex-row gap-8">
+              <span class="badge badge-pending">قيد المراجعة</span>
+              <span style="font-size:11px; color:var(--sabq-muted);">#B8860B</span>
+            </div>
+            <div class="flex-row gap-8">
+              <span class="badge badge-exclusive">⭐ حصري</span>
+              <span style="font-size:11px; color:var(--sabq-muted);">#B8860B / Ink</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================
+         2. TYPOGRAPHY SCALE
+         ============================================ -->
+    <section class="section" style="background: var(--sabq-surface);">
+      <div class="container">
+        <div class="section-title">✍️ الطباعة — Typography Scale</div>
+
+        <div class="typo-row">
+          <span class="typo-label">DISPLAY</span>
+          <div class="typo-display">أخبار عاجلة</div>
+        </div>
+        <div class="typo-row">
+          <span class="typo-label">H1 · 38px</span>
+          <div class="typo-h1">رئيس الوزراء يُطلق مبادرة كبرى للتحول الرقمي</div>
+        </div>
+        <div class="typo-row">
+          <span class="typo-label">H2 · 30px</span>
+          <div class="typo-h2">أبرز أخبار اليوم في السعودية والخليج</div>
+        </div>
+        <div class="typo-row">
+          <span class="typo-label">H3 · 22px</span>
+          <div class="typo-h3">مجلس الوزراء يوافق على نظام جديد لتنظيم القطاع المالي</div>
+        </div>
+        <div class="typo-row">
+          <span class="typo-label">BODY · 16px</span>
+          <div class="typo-body">تُواصل المملكة العربية السعودية مسيرة التحول نحو اقتصاد متنوع يُحقق أهداف رؤية 2030، من خلال ضخّ استثمارات ضخمة في قطاعات الترفيه والسياحة والتقنية والبنية التحتية.</div>
+        </div>
+        <div class="typo-row">
+          <span class="typo-label">CAPTION · 13px</span>
+          <div class="typo-caption">الرياض — السبت 5 أبريل 2026 · المصدر: وكالة الأنباء السعودية (واس)</div>
+        </div>
+
+        <div class="mt-32" style="background: var(--sabq-white); border: 1px solid var(--sabq-border); border-radius: 4px; padding: 24px;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--sabq-muted); letter-spacing: 0.08em; margin-bottom: 12px;">PLAYFAIR DISPLAY — للعناوين الكبرى الإنجليزية</div>
+          <div style="font-family: var(--font-heading); font-size: 42px; font-weight: 900; color: var(--sabq-ink); line-height: 1.2;">Breaking News</div>
+          <div style="font-family: var(--font-heading); font-size: 28px; font-weight: 700; color: var(--sabq-muted); line-height: 1.3; margin-top: 8px;">Saudi Arabia leads the region</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================
+         3. BUTTONS
+         ============================================ -->
+    <section class="section">
+      <div class="container">
+        <div class="section-title">🔘 الأزرار — Buttons</div>
+        <div class="flex-row mt-16">
+          <button class="btn btn-primary">إقرأ المزيد</button>
+          <button class="btn btn-primary" disabled style="opacity:0.5; cursor:not-allowed;">معطّل</button>
+          <button class="btn btn-secondary">اشترك الآن</button>
+          <button class="btn btn-gold">⭐ حصري</button>
+          <button class="btn btn-ghost">تصفية</button>
+        </div>
+        <div class="mt-16 flex-row">
+          <button class="btn btn-primary" style="padding: 8px 18px; font-size: 13px;">صغير</button>
+          <button class="btn btn-primary" style="padding: 12px 32px; font-size: 15px;">كبير</button>
+          <button class="btn btn-primary" style="width: 200px;">عرض ثابت</button>
+        </div>
+        <div class="mt-24 text-muted">
+          Primary: #C0392B → Hover #A93226 · Secondary: Outline Ink · Gold: #B8860B · Ghost: border-only
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================
+         4. NEWS CARDS
+         ============================================ -->
+    <section class="section" style="background: var(--sabq-surface);">
+      <div class="container">
+        <div class="section-title">📰 الكاردز — News Cards</div>
+
+        <!-- Section divider demo -->
+        <div class="editorial-section-header mt-16">
+          <div class="editorial-section-title">آخر الأخبار</div>
+        </div>
+
+        <div class="grid-3">
+          <!-- Regular News Card -->
+          <article class="news-card">
+            <div class="news-card-img-placeholder"></div>
+            <div class="news-card-category-bar"></div>
+            <div class="news-card-body">
+              <span class="news-card-tag">محلي</span>
+              <h3 class="news-card-title">مجلس الوزراء يُقرّ حزمة إصلاحات اقتصادية جديدة تشمل تخفيف القيود على الاستثمار الأجنبي</h3>
+              <div class="news-card-meta">
+                <span>قبل ٣٠ دقيقة</span>
+                <span class="meta-dot">·</span>
+                <span>واس</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Regular News Card 2 -->
+          <article class="news-card">
+            <div class="news-card-img-placeholder"></div>
+            <div class="news-card-category-bar" style="background: var(--sabq-gold);"></div>
+            <div class="news-card-body">
+              <span class="news-card-tag" style="color: var(--sabq-gold);">⭐ حصري</span>
+              <h3 class="news-card-title">مصادر لـ سبق: مشروع نيوم يُعلن عن شراكة تقنية ضخمة مع شركة آسيوية كبرى</h3>
+              <div class="news-card-meta">
+                <span>منذ ساعة</span>
+                <span class="meta-dot">·</span>
+                <span>فريق سبق</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Regular News Card 3 -->
+          <article class="news-card">
+            <div class="news-card-img-placeholder"></div>
+            <div class="news-card-category-bar" style="background: #1E7D4F;"></div>
+            <div class="news-card-body">
+              <span class="news-card-tag" style="color: #1E7D4F;">رياضة</span>
+              <h3 class="news-card-title">الأخضر يُحقق فوزاً تاريخياً على البرازيل في مباراة ودية قبل كأس العالم</h3>
+              <div class="news-card-meta">
+                <span>منذ ٣ ساعات</span>
+                <span class="meta-dot">·</span>
+                <span>أحمد الزهراني</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- Breaking News Card -->
+        <div class="editorial-section-header mt-32">
+          <div class="editorial-section-title red-accent">⚡ أخبار عاجلة</div>
+        </div>
+
+        <div class="grid-2">
+          <article class="breaking-card">
+            <div class="breaking-label">
+              <span class="breaking-pulse"></span>
+              عاجل
+            </div>
+            <h3 class="breaking-title">ولي العهد يُطلق مشروع البنية التحتية الرقمية الوطنية بتكلفة ٥٠ مليار ريال خلال السنوات العشر القادمة</h3>
+            <div class="breaking-meta">
+              <span>🕐 الآن</span>
+              <span>·</span>
+              <span>واس</span>
+              <span>·</span>
+              <span>الرياض</span>
+            </div>
+          </article>
+
+          <article class="breaking-card">
+            <div class="breaking-label">
+              <span class="breaking-pulse"></span>
+              عاجل
+            </div>
+            <h3 class="breaking-title">الهيئة العامة للطيران تُعلن إضافة ١٢ وجهة دولية جديدة من مطار الملك عبدالعزيز الدولي ابتداءً من مطلع الصيف</h3>
+            <div class="breaking-meta">
+              <span>🕐 منذ ٥ دقائق</span>
+              <span>·</span>
+              <span>الهيئة العامة للطيران</span>
+            </div>
+          </article>
+        </div>
+
+        <!-- Hero Card -->
+        <div class="editorial-section-header mt-32">
+          <div class="editorial-section-title">الخبر الرئيسي</div>
+        </div>
+
+        <div class="grid-2" style="grid-template-columns: 2fr 1fr;">
+          <article class="hero-card">
+            <div class="hero-card-bg">🌍</div>
+            <div class="hero-card-overlay"></div>
+            <div class="hero-card-content">
+              <span class="hero-card-tag">دولي</span>
+              <div class="hero-divider"></div>
+              <h2 class="hero-card-title">قمة مجموعة العشرين تنطلق في الرياض بمشاركة قادة أكبر اقتصادات العالم لبحث مستقبل الاقتصاد الرقمي والذكاء الاصطناعي</h2>
+              <div class="hero-card-meta">قبل ١٠ دقائق · وكالة أسوشيتد برس</div>
+            </div>
+          </article>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <article class="news-card" style="flex: 1;">
+              <div class="news-card-category-bar"></div>
+              <div class="news-card-body">
+                <span class="news-card-tag">اقتصاد</span>
+                <h3 class="news-card-title" style="font-size:15px;">أسعار النفط ترتفع فوق ٩٠ دولاراً للبرميل للمرة الأولى منذ عام</h3>
+                <div class="news-card-meta"><span>منذ ٢ ساعة</span></div>
+              </div>
+            </article>
+            <article class="news-card" style="flex: 1;">
+              <div class="news-card-category-bar" style="background: var(--sabq-gold);"></div>
+              <div class="news-card-body">
+                <span class="news-card-tag" style="color:var(--sabq-gold);">تقنية</span>
+                <h3 class="news-card-title" style="font-size:15px;">آبل تُعلن عن رقاقة M5 بأداء يفوق المنافسين بنسبة ٤٠٪</h3>
+                <div class="news-card-meta"><span>منذ ٤ ساعات</span></div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================
+         5. FORM INPUTS
+         ============================================ -->
+    <section class="section">
+      <div class="container">
+        <div class="section-title">📝 حقول الإدخال — Inputs</div>
+        <div class="grid-2 mt-16">
+          <div>
+            <label style="display:block; font-size:14px; font-weight:600; color:var(--sabq-ink); margin-bottom:6px;">عنوان الخبر</label>
+            <input class="sabq-input" type="text" placeholder="أدخل عنوان الخبر الرئيسي…">
+          </div>
+          <div>
+            <label style="display:block; font-size:14px; font-weight:600; color:var(--sabq-ink); margin-bottom:6px;">القسم</label>
+            <input class="sabq-input" type="text" placeholder="اختر القسم المناسب…">
+          </div>
+        </div>
+        <div class="mt-16">
+          <label style="display:block; font-size:14px; font-weight:600; color:var(--sabq-ink); margin-bottom:6px;">ملخص الخبر</label>
+          <textarea class="sabq-input" rows="3" style="resize:vertical;" placeholder="اكتب ملخصاً مختصراً للخبر في ٢-٣ جمل…"></textarea>
+        </div>
+        <div class="mt-16 flex-row">
+          <button class="btn btn-primary">نشر الخبر</button>
+          <button class="btn btn-ghost">حفظ كمسودة</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================
+         6. DESIGN PRINCIPLES QUICK REF
+         ============================================ -->
+    <section class="section" style="background: var(--sabq-ink); color: var(--sabq-white);">
+      <div class="container">
+        <div class="section-title" style="color: var(--sabq-red); border-bottom-color: var(--sabq-red);">📋 المبادئ الأساسية — Design Principles</div>
+        <div class="grid-3 mt-24">
+          <div style="padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">
+            <div style="font-size: 24px; margin-bottom: 12px;">✅</div>
+            <h4 style="font-size: 14px; font-weight: 700; color: #4ade80; margin-bottom: 8px;">افعل</h4>
+            <ul style="font-size: 13px; color: rgba(255,255,255,0.7); line-height: 2; list-style: none; padding: 0;">
+              <li>أسود حقيقي #0D0D0D للعناوين</li>
+              <li>حواف حادة (radius: 4px)</li>
+              <li>خط أحمر رفيع تحت التصنيف</li>
+              <li>الكثافة المنظّمة في شبكة صارمة</li>
+              <li>صور 16:9 في الكاردز</li>
+              <li>label "عاجل" بخلفية حمراء</li>
+            </ul>
+          </div>
+          <div style="padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">
+            <div style="font-size: 24px; margin-bottom: 12px;">❌</div>
+            <h4 style="font-size: 14px; font-weight: 700; color: #f87171; margin-bottom: 8px;">لا تفعل</h4>
+            <ul style="font-size: 13px; color: rgba(255,255,255,0.7); line-height: 2; list-style: none; padding: 0;">
+              <li>لا gradients زخرفية</li>
+              <li>لا border-radius &gt; 6px</li>
+              <li>لا ألوان باستيل كـ primary</li>
+              <li>لا animations ترفيهية</li>
+              <li>لا أزرق #1E9DF1 كـ accent</li>
+              <li>لا خطوط سكريبت أو زخرفية</li>
+            </ul>
+          </div>
+          <div style="padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">
+            <div style="font-size: 24px; margin-bottom: 12px;">🎯</div>
+            <h4 style="font-size: 14px; font-weight: 700; color: var(--sabq-gold); margin-bottom: 8px;">الروح العامة</h4>
+            <ul style="font-size: 13px; color: rgba(255,255,255,0.7); line-height: 2; list-style: none; padding: 0;">
+              <li>المحتوى أولاً — لا زخرفة</li>
+              <li>RTL أولاً وأبداً</li>
+              <li>الثقة عبر البساطة</li>
+              <li>صحيفة ورقية راقية رقمياً</li>
+              <li>نظيفة · موثوقة · لا تصرخ</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================
+       FOOTER
+       ============================================ -->
+  <footer class="sabq-footer">
+    <div class="container">
+      <div class="sabq-footer-logo">سبق.</div>
+      <div>صحيفة سبق الإلكترونية © ٢٠٢٦ — Design System Preview</div>
+      <div style="font-size: 11px; color: rgba(255,255,255,0.3);">DESIGN.md v1.0 · RTL-First · Cairo + Playfair Display</div>
+    </div>
+  </footer>
+
+</body>
+</html>
